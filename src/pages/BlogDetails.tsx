@@ -465,14 +465,6 @@ class BlogDetails extends Component<{ params: { id: string } }, BlogDetailsState
             formData.append(`content[content_photos_attributes][${index}][alt_ar]`, img.altAr || '');
         });
 
-        console.log("Preparing to send Merged Blog Content FormData:");
-        formData.forEach((value, key) => {
-            if (value instanceof File) {
-                console.log(`${key}: File - ${value.name}`);
-            } else {
-                console.log(`${key}:`, value);
-            }
-        });
 
         try {
             await saveBlogContents(blog.id, formData);

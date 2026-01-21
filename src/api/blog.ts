@@ -66,13 +66,15 @@ export interface BlogImage {
 
 export interface Blog {
     id: string;
-    image: string; // URL or Base64
+    image: string; // URL for list view
+    imageAr: string;
+    imageArId?: number;
+    imageEn: string;
+    imageEnId?: number;
     imageAltEn: string;
     imageAltAr: string;
     titleEn: string;
     titleAr: string;
-    descriptionEn: string;
-    descriptionAr: string;
     itemTitleEn: string;
     itemDescriptionEn: string;
     itemTitleAr: string;
@@ -90,65 +92,73 @@ export interface Blog {
 
 // --- API Response Types (SnakeCase) ---
 // These match the raw server response
-interface RawBlogResponse {
+// These match the raw server response
+interface RawBlogPhoto {
     id: number;
-    photo_id: string | null;
-    photo_url?: string;
+    url: string;
+    alt: string;
+    is_arabic: boolean;
+}
+
+interface RawBlogResponse {
+   id: number;
     title_ar: string;
     title_en: string;
-    description_ar: string;
-    description_en: string;
-    image_alt_text_ar: string;
-    image_alt_text_en: string;
-    meta_title_ar: string;
-    meta_title_en: string;
-    meta_description_ar: string;
-    meta_description_en: string;
     category: string | number;
     slug: string;
     slug_ar: string;
-    is_published: number | boolean;
-    created_at: string;
+    photos: RawBlogPhoto[];
+    meta_description_ar: string;
+    meta_description_en: string;
+    meta_title_ar: string;
+    meta_title_en: string;
+    is_published: boolean;
     // Note: blocks and faqs might need specific raw types if they are returned by getById
 }
 
 // --- Mapper Logic ---
-const mapRawToBlog = (raw: RawBlogResponse): Blog => ({
-    id: raw?.id?.toString() || "",
-    image: raw.photo_url || "", // Assuming photo_url is provided or derived from photo_id
-    imageAltEn: raw.image_alt_text_en || "",
-    imageAltAr: raw.image_alt_text_ar || "",
-    titleEn: raw.title_en || "",
-    titleAr: raw.title_ar || "",
-    descriptionEn: raw.description_en || "",
-    descriptionAr: raw.description_ar || "",
-    itemTitleEn: raw.meta_title_en || "",
-    itemDescriptionEn: raw.meta_description_en || "",
-    itemTitleAr: raw.meta_title_ar || "",
-    itemDescriptionAr: raw.meta_description_ar || "",
-    category: getCategoryName(raw.category),
-    slug: raw.slug || "",
-    slugAr: raw.slug_ar || "",
-    isPublished: !!raw.is_published,
-    blocks: [], // Map these if the API returns them
-    faqs: [],   // Map these if the API returns them
-    createdAt: raw.created_at,
-});
+const mapRawToBlog = (raw: RawBlogResponse): Blog => {
+    const photoAr = raw.photos?.find(p => p.is_arabic);
+    const photoEn = raw.photos?.find(p => !p.is_arabic);
 
+    return {
+        id: raw?.id?.toString() || "",
+        image: photoEn?.url || photoAr?.url || "", // Fallback
+        imageAr: photoAr?.url || "",
+        imageArId: photoAr?.id,
+        imageEn: photoEn?.url || "",
+        imageEnId: photoEn?.id,
+        imageAltEn: photoEn?.alt || "",
+        imageAltAr: photoAr?.alt || "",
+        titleEn: raw.title_en || "",
+        titleAr: raw.title_ar || "",
+        itemTitleEn: raw.meta_title_en || "",
+        itemDescriptionEn: raw.meta_description_en || "",
+        itemTitleAr: raw.meta_title_ar || "",
+        itemDescriptionAr: raw.meta_description_ar || "",
+        category: getCategoryName(raw.category),
+        slug: raw.slug || "",
+        slugAr: raw.slug_ar || "",
+        isPublished: !!raw.is_published,
+        blocks: [],
+        faqs: [],
+        createdAt: "", // Not provided in new snippet but should be preserved if available
+    };
+};
 interface RawFAQResponse {
-    id: number;
+       id: number;
     question_ar: string;
     question_en: string;
     answer_ar: string;
     answer_en: string;
-    plog_id: number;
+    blog_id: number;
     is_deleted: boolean;
     is_published: boolean;
     created_at: string;
 }
 
 const mapRawToFAQ = (raw: RawFAQResponse): BlogFAQ => ({
-    id: raw.id.toString(),
+ id: raw.id.toString(),
     questionEn: raw.question_en || "",
     questionAr: raw.question_ar || "",
     answerEn: "", // JSON format not provided by GET faqs, we'll use HTML
@@ -161,7 +171,7 @@ const mapRawToFAQ = (raw: RawFAQResponse): BlogFAQ => ({
 
 /**
  * Get all blogs
- * GET /plogs
+ * GET /blogs
  */
 export const getAllBlogs = async (): Promise<Blog[]> => {
     const response = await axiosInstance.get<RawBlogResponse[]>("/blogs");
@@ -170,7 +180,7 @@ export const getAllBlogs = async (): Promise<Blog[]> => {
 
 /**
  * Get a single blog by ID
- * GET /plogs/:id
+ * GET /blogs/:id
  */
 export const getBlogById = async (id: string): Promise<Blog> => {
     const response = await axiosInstance.get<RawBlogResponse>(`/blogs/${id}`);
@@ -198,7 +208,7 @@ interface RawContentBlock {
 
 /**
  * Get blog contents (blocks, gallery)
- * GET /plogs/:id/contents
+ * GET /blogs/:id/contents
  */
 export const getBlogContents = async (blog_id: string): Promise<BlogContents> => {
     const response = await axiosInstance.get<RawContentBlock[]>(`/blogs/${blog_id}/contents`);
@@ -237,17 +247,9 @@ export const getBlogContents = async (blog_id: string): Promise<BlogContents> =>
 
 /**
  * Save blog structured content
- * POST /plogs/:id/contents
+ * POST /blogs/:id/contents
  */
 export const saveBlogContents = async (blog_id: string, formData: FormData): Promise<void> => {
-    console.log(`Saving Blog ${blog_id} contents (FormData):`);
-    formData.forEach((value, key) => {
-        if (value instanceof File) {
-            console.log(`${key}: File - ${value.name} (${value.size} bytes)`);
-        } else {
-            console.log(`${key}:`, value);
-        }
-    });
 
     await axiosInstance.post(`/blogs/${blog_id}/contents`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
@@ -256,22 +258,29 @@ export const saveBlogContents = async (blog_id: string, formData: FormData): Pro
 
 /**
  * Create a new blog using FormData
- * POST /plogs
+ * POST /blogs
  */
-export const createBlog = async (data: Partial<Blog> & { photoFile?: File }): Promise<Blog> => {
-    const formData = new FormData();
+export const createBlog = async (data: Partial<Blog> & { photoFileAr?: File; photoFileEn?: File }): Promise<Blog> => {
+   const formData = new FormData();
 
-    if (data.photoFile) {
-        formData.append("blog[photo_id]", data.photoFile);
+    // Arabic Photo (Index 0)
+    if (data.photoFileAr || data.imageAltAr !== undefined || data.imageArId) {
+        if (data.imageArId) formData.append("blog[blog_photos_attributes][0][id]", data.imageArId.toString());
+        if (data.photoFileAr) formData.append("blog[blog_photos_attributes][0][photo]", data.photoFileAr);
+        formData.append("blog[blog_photos_attributes][0][alt_ar]", data.imageAltAr || "");
+        formData.append("blog[blog_photos_attributes][0][is_arabic]", "1");
     }
 
-    if (data.imageAltAr) formData.append("blog[image_alt_text_ar]", data.imageAltAr);
-    if (data.imageAltEn) formData.append("blog[image_alt_text_en]", data.imageAltEn);
+    // English Photo (Index 1)
+    if (data.photoFileEn || data.imageAltEn !== undefined || data.imageEnId) {
+        if (data.imageEnId) formData.append("blog[blog_photos_attributes][1][id]", data.imageEnId.toString());
+        if (data.photoFileEn) formData.append("blog[blog_photos_attributes][1][photo]", data.photoFileEn);
+        formData.append("blog[blog_photos_attributes][1][alt_en]", data.imageAltEn || "");
+        formData.append("blog[blog_photos_attributes][1][is_arabic]", "0");
+    }
 
     if (data.titleAr) formData.append("blog[title_ar]", data.titleAr);
     if (data.titleEn) formData.append("blog[title_en]", data.titleEn);
-    if (data.descriptionAr) formData.append("blog[description_ar]", data.descriptionAr);
-    if (data.descriptionEn) formData.append("blog[description_en]", data.descriptionEn);
     if (data.itemTitleAr) formData.append("blog[meta_title_ar]", data.itemTitleAr);
     if (data.itemTitleEn) formData.append("blog[meta_title_en]", data.itemTitleEn);
     if (data.slug) formData.append("blog[slug]", data.slug);
@@ -283,39 +292,36 @@ export const createBlog = async (data: Partial<Blog> & { photoFile?: File }): Pr
     }
     formData.append("blog[is_published]", data.isPublished ? "1" : "0");
 
-    console.log("Creating Blog (FormData):");
-    formData.forEach((value, key) => {
-        if (value instanceof File) {
-            console.log(`${key}: File - ${value.name} (${value.size} bytes)`);
-        } else {
-            console.log(`${key}:`, value);
-        }
-    });
-
-    const response = await axiosInstance.post<RawBlogResponse>("/blogs", formData, {
+   const response = await axiosInstance.post<RawBlogResponse>("/blogs", formData, {
         headers: { "Content-Type": "multipart/form-data" },
     });
     return mapRawToBlog(response.data);
 };
-
 /**
  * Update an existing blog using FormData
- * PUT /plogs/:id
+ * PUT /blogs/:id
  */
-export const updateBlog = async (id: string, data: Partial<Blog> & { photoFile?: File }): Promise<Blog> => {
-    const formData = new FormData();
+export const updateBlog = async (id: string, data: Partial<Blog> & { photoFileAr?: File; photoFileEn?: File }): Promise<Blog> => {
+      const formData = new FormData();
 
-    if (data.photoFile) {
-        formData.append("blog[photo_id]", data.photoFile);
+    // Arabic Photo (Index 0)
+    if (data.photoFileAr || data.imageAltAr !== undefined || data.imageArId) {
+        if (data.imageArId) formData.append("blog[blog_photos_attributes][0][id]", data.imageArId.toString());
+        if (data.photoFileAr) formData.append("blog[blog_photos_attributes][0][photo]", data.photoFileAr);
+        formData.append("blog[blog_photos_attributes][0][alt_ar]", data.imageAltAr || "");
+        formData.append("blog[blog_photos_attributes][0][is_arabic]", "1");
     }
 
-    if (data.imageAltAr) formData.append("blog[image_alt_text_ar]", data.imageAltAr);
-    if (data.imageAltEn) formData.append("blog[image_alt_text_en]", data.imageAltEn);
+    // English Photo (Index 1)
+    if (data.photoFileEn || data.imageAltEn !== undefined || data.imageEnId) {
+        if (data.imageEnId) formData.append("blog[blog_photos_attributes][1][id]", data.imageEnId.toString());
+        if (data.photoFileEn) formData.append("blog[blog_photos_attributes][1][photo]", data.photoFileEn);
+        formData.append("blog[blog_photos_attributes][1][alt_en]", data.imageAltEn || "");
+        formData.append("blog[blog_photos_attributes][1][is_arabic]", "0");
+    }
 
     if (data.titleAr) formData.append("blog[title_ar]", data.titleAr);
     if (data.titleEn) formData.append("blog[title_en]", data.titleEn);
-    if (data.descriptionAr) formData.append("blog[description_ar]", data.descriptionAr);
-    if (data.descriptionEn) formData.append("blog[description_en]", data.descriptionEn);
     if (data.itemTitleAr) formData.append("blog[meta_title_ar]", data.itemTitleAr);
     if (data.itemTitleEn) formData.append("blog[meta_title_en]", data.itemTitleEn);
     if (data.slug) formData.append("blog[slug]", data.slug);
@@ -327,14 +333,6 @@ export const updateBlog = async (id: string, data: Partial<Blog> & { photoFile?:
     }
     if (data.isPublished !== undefined) formData.append("blog[is_published]", data.isPublished ? "1" : "0");
 
-    console.log(`Updating Blog ${id} Meta (FormData):`);
-    formData.forEach((value, key) => {
-        if (value instanceof File) {
-             console.log(`${key}: File - ${value.name} (${value.size} bytes)`);
-        } else {
-             console.log(`${key}:`, value);
-        }
-    });
 
     // Note: Some APIs require POST with _method=PUT for multipart/form-data updates
     const response = await axiosInstance.put<RawBlogResponse>(`/blogs/${id}`, formData, {
@@ -354,11 +352,9 @@ export const getBlogFAQs = async (blog_id: string): Promise<BlogFAQ[]> => {
 
 /**
  * Create a new FAQ for a blog
- * POST /plogs/:id/faqs
+ * POST /blogs/:id/faqs
  */
 export const createBlogFAQ = async (blog_id: string, formData: FormData): Promise<void> => {
-    console.log(`Creating FAQ for Blog ${blog_id} (FormData):`);
-    formData.forEach((value, key) => console.log(`${key}:`, value));
 
     await axiosInstance.post(`/blogs/${blog_id}/faqs`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
@@ -367,11 +363,9 @@ export const createBlogFAQ = async (blog_id: string, formData: FormData): Promis
 
 /**
  * Update an existing FAQ
- * PUT /plogs/:plog_id/faqs/:id
+ * PUT /blogs/:blog_id/faqs/:id
  */
 export const updateBlogFAQ = async (blog_id: string, faqId: string, formData: FormData): Promise<void> => {
-    console.log(`Updating FAQ ${faqId} for Blog ${blog_id} (FormData):`);
-    formData.forEach((value, key) => console.log(`${key}:`, value));
 
     await axiosInstance.put(`/blogs/${blog_id}/faqs/${faqId}`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
@@ -388,7 +382,7 @@ export const deleteBlogFAQ = async (blog_id: string, faqId: string): Promise<voi
 
 /**
  * Delete a specific blog content section
- * DELETE /plogs/:plog_id/contents/:id
+ * DELETE /blogs/:blog_id/contents/:id
  */
 export const deleteBlogContent = async (blog_id: string, contentId: string): Promise<void> => {
     await axiosInstance.delete(`/blogs/${blog_id}/contents/${contentId}`);
@@ -396,11 +390,9 @@ export const deleteBlogContent = async (blog_id: string, contentId: string): Pro
 
 /**
  * Update a specific blog content section
- * PUT /plogs/:plog_id/contents/:id
+ * PUT /blogs/:blog_id/contents/:id
  */
 export const updateBlogContent = async (blog_id: string, contentId: string, formData: FormData): Promise<void> => {
-    console.log(`Updating Content ${contentId} for Blog ${blog_id} (FormData):`);
-    formData.forEach((value, key) => console.log(`${key}:`, value));
 
     await axiosInstance.put(`/blogs/${blog_id}/contents/${contentId}`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
@@ -409,7 +401,7 @@ export const updateBlogContent = async (blog_id: string, contentId: string, form
 
 /**
  * Delete a blog
- * DELETE /plogs/:id
+ * DELETE /blogs/:id
  */
 export const deleteBlog = async (id: string): Promise<void> => {
     await axiosInstance.delete(`/blogs/${id}`);

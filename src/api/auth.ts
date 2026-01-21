@@ -30,8 +30,6 @@ export const signUp = async (data: Record<string, string>) => {
     formData.append("user[password]", data.password);
     formData.append("user[password_confirmation]", data.passwordConfirmation);
 
-    console.log("Sending SignUp FormData:");
-    formData.forEach((value, key) => console.log(`${key}:`, value));
 
     const response = await axiosInstance.post("/signup", formData, {
         headers: { "Content-Type": "multipart/form-data" },

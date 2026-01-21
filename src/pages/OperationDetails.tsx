@@ -465,14 +465,6 @@ class OperationDetails extends Component<{ params: { id: string } }, OperationDe
             formData.append(`content[content_photos_attributes][${index}][alt_ar]`, img.altAr || '');
         });
 
-        console.log("Preparing to send Merged Operation Content FormData:");
-        formData.forEach((value, key) => {
-            if (value instanceof File) {
-                console.log(`${key}: File - ${value.name}`);
-            } else {
-                console.log(`${key}:`, value);
-            }
-        });
 
         try {
             await saveOperationContents(operation.id, formData);

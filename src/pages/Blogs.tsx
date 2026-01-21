@@ -15,8 +15,12 @@ interface BlogsState {
     viewLanguage: 'en' | 'ar';
 
     // Form State
-    formImage: string;
-    photoFile: File | null;
+    formImageAr: string;
+    formImageArId: number | null;
+    photoFileAr: File | null;
+    formImageEn: string;
+    formImageEnId: number | null;
+    photoFileEn: File | null;
     formCategory: string | number;
     formSlug: string;
     formSlugAr: string;
@@ -24,21 +28,18 @@ interface BlogsState {
 
     // English Fields
     formTitleEn: string;
-    formDescriptionEn: string;
     formImageAltEn: string;
     formItemTitleEn: string;
     formItemDescriptionEn: string;
 
     // Arabic Fields
     formTitleAr: string;
-    formDescriptionAr: string;
     formImageAltAr: string;
     formItemTitleAr: string;
     formItemDescriptionAr: string;
     formIsPublished: boolean;
     isSaving: boolean;
 }
-
 
 // Wrapper for hook usage
 const BlogsPageWrapper = () => {
@@ -56,28 +57,29 @@ class BlogsPage extends Component<{ navigate: (path: string) => void }, BlogsSta
             activeTab: 'en',
             viewLanguage: 'en',
 
-            formImage: '',
-            photoFile: null,
+            formImageAr: '',
+            formImageArId: null,
+            photoFileAr: null,
+            formImageEn: '',
+            formImageEnId: null,
+            photoFileEn: null,
             formCategory: CATEGORIES[0].id,
             formSlug: '',
             formSlugAr: '',
             formLink: '',
 
             formTitleEn: '',
-            formDescriptionEn: '',
             formImageAltEn: '',
             formItemTitleEn: '',
             formItemDescriptionEn: '',
 
             formTitleAr: '',
-            formDescriptionAr: '',
             formImageAltAr: '',
             formItemTitleAr: '',
             formItemDescriptionAr: '',
             formIsPublished: false,
             isSaving: false,
         };
-
     }
 
     componentDidMount() {
@@ -86,7 +88,7 @@ class BlogsPage extends Component<{ navigate: (path: string) => void }, BlogsSta
 
     loadBlogs = async () => {
         try {
-            const blogs = await getAllBlogs();
+            const blogs = (await getAllBlogs()).reverse();
             this.setState({ blogs });
         } catch (e) {
             console.error('Error loading blogs:', e);
@@ -98,13 +100,22 @@ class BlogsPage extends Component<{ navigate: (path: string) => void }, BlogsSta
         this.setState({ blogs });
     };
 
-    handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, lang: 'ar' | 'en') => {
         const file = e.target.files?.[0];
         if (file) {
-            this.setState({ photoFile: file });
+            if (lang === 'ar') {
+                this.setState({ photoFileAr: file });
+            } else {
+                this.setState({ photoFileEn: file });
+            }
+
             const reader = new FileReader();
             reader.onloadend = () => {
-                this.setState({ formImage: reader.result as string });
+                if (lang === 'ar') {
+                    this.setState({ formImageAr: reader.result as string });
+                } else {
+                    this.setState({ formImageEn: reader.result as string });
+                }
             };
             reader.readAsDataURL(file);
         }
@@ -121,20 +132,23 @@ class BlogsPage extends Component<{ navigate: (path: string) => void }, BlogsSta
                 isModalOpen: true,
                 editingId: blog.id,
 
-                formImage: blog.image,
+                formImageAr: blog.imageAr || '',
+                formImageArId: blog.imageArId || null,
+                formImageEn: blog.imageEn || '',
+                formImageEnId: blog.imageEnId || null,
+                photoFileAr: null,
+                photoFileEn: null,
                 formCategory: getCategoryId(blog.category),
                 formSlug: blog.slug || '',
                 formSlugAr: blog.slugAr || '',
                 formLink: blog.link || '',
 
                 formTitleEn: blog.titleEn,
-                formDescriptionEn: blog.descriptionEn || '',
                 formImageAltEn: blog.imageAltEn,
                 formItemTitleEn: blog.itemTitleEn || '',
                 formItemDescriptionEn: blog.itemDescriptionEn || '',
 
                 formTitleAr: blog.titleAr,
-                formDescriptionAr: blog.descriptionAr || '',
                 formImageAltAr: blog.imageAltAr,
                 formItemTitleAr: blog.itemTitleAr || '',
                 formItemDescriptionAr: blog.itemDescriptionAr || '',
@@ -145,21 +159,23 @@ class BlogsPage extends Component<{ navigate: (path: string) => void }, BlogsSta
                 isModalOpen: true,
                 editingId: null,
 
-                formImage: '',
-                photoFile: null,
+                formImageAr: '',
+                formImageArId: null,
+                photoFileAr: null,
+                formImageEn: '',
+                formImageEnId: null,
+                photoFileEn: null,
                 formCategory: CATEGORIES[0].id,
                 formSlug: '',
                 formSlugAr: '',
                 formLink: '',
 
                 formTitleEn: '',
-                formDescriptionEn: '',
                 formImageAltEn: '',
                 formItemTitleEn: '',
                 formItemDescriptionEn: '',
 
                 formTitleAr: '',
-                formDescriptionAr: '',
                 formImageAltAr: '',
                 formItemTitleAr: '',
                 formItemDescriptionAr: '',
@@ -182,36 +198,34 @@ class BlogsPage extends Component<{ navigate: (path: string) => void }, BlogsSta
         e.preventDefault();
         const {
             editingId,
-            photoFile, formCategory, formSlug, formSlugAr,
-            formTitleEn, formDescriptionEn, formImageAltEn, formItemTitleEn, formItemDescriptionEn,
-            formTitleAr, formDescriptionAr, formImageAltAr, formItemTitleAr, formItemDescriptionAr,
+            photoFileAr, photoFileEn, formCategory, formSlug, formSlugAr,
+            formTitleEn, formImageAltEn, formItemTitleEn, formItemDescriptionEn,
+            formTitleAr, formImageAltAr, formItemTitleAr, formItemDescriptionAr,
             formIsPublished
         } = this.state;
 
-        const blogData: Partial<Blog> & { photoFile?: File } = {
-            photoFile: photoFile || undefined,
+        const blogData: Partial<Blog> & { photoFileAr?: File; photoFileEn?: File } = {
+            photoFileAr: photoFileAr || undefined,
+            photoFileEn: photoFileEn || undefined,
+            imageArId: this.state.formImageArId || undefined,
+            imageEnId: this.state.formImageEnId || undefined,
             category: formCategory,
             slug: formSlug,
             slugAr: formSlugAr,
             titleEn: formTitleEn,
-            descriptionEn: formDescriptionEn,
             imageAltEn: formImageAltEn,
             itemTitleEn: formItemTitleEn,
             itemDescriptionEn: formItemDescriptionEn,
             titleAr: formTitleAr,
-            descriptionAr: formDescriptionAr,
             imageAltAr: formImageAltAr,
             itemTitleAr: formItemTitleAr,
             itemDescriptionAr: formItemDescriptionAr,
             isPublished: formIsPublished,
         };
 
-
-
         this.setState({ isSaving: true });
 
         try {
-
             if (editingId) {
                 await updateBlog(editingId, blogData);
                 toast.success('Blog updated successfully!');
@@ -230,7 +244,6 @@ class BlogsPage extends Component<{ navigate: (path: string) => void }, BlogsSta
         }
     };
 
-
     handleDelete = async (id: string) => {
         if (window.confirm('Are you sure you want to delete this blog?')) {
             try {
@@ -248,9 +261,10 @@ class BlogsPage extends Component<{ navigate: (path: string) => void }, BlogsSta
     render() {
         const {
             blogs, isModalOpen, editingId, viewLanguage,
-            formImage, formCategory, formSlug, formSlugAr,
-            formTitleEn, formDescriptionEn, formImageAltEn, formItemTitleEn, formItemDescriptionEn,
-            formTitleAr, formDescriptionAr, formImageAltAr, formItemTitleAr, formItemDescriptionAr
+            formCategory, formSlug, formSlugAr,
+            formTitleEn, formImageAltEn, formItemTitleEn, formItemDescriptionEn,
+            formTitleAr, formImageAltAr, formItemTitleAr, formItemDescriptionAr,
+            isSaving
         } = this.state;
 
         return (
@@ -326,18 +340,34 @@ class BlogsPage extends Component<{ navigate: (path: string) => void }, BlogsSta
                                             </span>
                                         </div>
                                         <div className="aspect-video w-full overflow-hidden bg-gray-100 dark:bg-gray-800">
-                                            {blog.image ? (
-                                                <img
-                                                    src={blog.image}
-                                                    alt={imageAlt}
-                                                    className="h-full w-full object-cover"
-                                                />
+                                            {viewLanguage === 'en' ? (
+                                                blog.imageEn ? (
+                                                    <img
+                                                        src={blog.imageEn}
+                                                        alt={imageAlt}
+                                                        className="h-full w-full object-cover"
+                                                    />
+                                                ) : (
+                                                    <div className="flex h-full items-center justify-center text-gray-400">
+                                                        <svg className="h-12 w-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                        </svg>
+                                                    </div>
+                                                )
                                             ) : (
-                                                <div className="flex h-full items-center justify-center text-gray-400">
-                                                    <svg className="h-12 w-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                                    </svg>
-                                                </div>
+                                                blog.imageAr ? (
+                                                    <img
+                                                        src={blog.imageAr}
+                                                        alt={imageAlt}
+                                                        className="h-full w-full object-cover"
+                                                    />
+                                                ) : (
+                                                    <div className="flex h-full items-center justify-center text-gray-400">
+                                                        <svg className="h-12 w-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                        </svg>
+                                                    </div>
+                                                )
                                             )}
                                         </div>
                                         <div className="p-5">
@@ -403,28 +433,6 @@ class BlogsPage extends Component<{ navigate: (path: string) => void }, BlogsSta
                                 <form onSubmit={this.handleSubmit} className="space-y-6">
                                     {/* SHARED FIELDS */}
                                     <div className="grid gap-6 sm:grid-cols-2">
-                                        {/* Image Upload */}
-                                        <div className="sm:col-span-2">
-                                            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                Blog Image
-                                            </label>
-                                            <div className="flex items-center gap-4">
-                                                {formImage && (
-                                                    <img
-                                                        src={formImage}
-                                                        alt="Preview"
-                                                        className="h-16 w-16 rounded-lg object-cover"
-                                                    />
-                                                )}
-                                                <input
-                                                    type="file"
-                                                    accept="image/*"
-                                                    onChange={this.handleFileChange}
-                                                    className="block w-full text-sm text-gray-500 file:mr-4 file:rounded-lg file:border-0 file:bg-blue-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-900/30 dark:file:text-blue-400"
-                                                />
-                                            </div>
-                                        </div>
-
                                         {/* Category */}
                                         <div className="sm:col-span-2">
                                             <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -498,6 +506,27 @@ class BlogsPage extends Component<{ navigate: (path: string) => void }, BlogsSta
                                                 <span className="flex h-6 w-6 items-center justify-center rounded bg-blue-100 text-xs font-bold text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">EN</span>
                                                 English Content
                                             </h4>
+                                            {/* Image Upload En */}
+                                            <div>
+                                                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                    Blog Image (English)
+                                                </label>
+                                                <div className="flex items-center gap-4">
+                                                    {this.state.formImageEn && (
+                                                        <img
+                                                            src={this.state.formImageEn}
+                                                            alt="Preview"
+                                                            className="h-16 w-16 rounded-lg object-cover"
+                                                        />
+                                                    )}
+                                                    <input
+                                                        type="file"
+                                                        accept="image/*"
+                                                        onChange={(e) => this.handleFileChange(e, 'en')}
+                                                        className="block w-full text-sm text-gray-500 file:mr-4 file:rounded-lg file:border-0 file:bg-blue-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-900/30 dark:file:text-blue-400"
+                                                    />
+                                                </div>
+                                            </div>
                                             {/* Title En */}
                                             <div>
                                                 <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -511,21 +540,6 @@ class BlogsPage extends Component<{ navigate: (path: string) => void }, BlogsSta
                                                     required
                                                     className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-800 outline-none focus:border-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
                                                     placeholder="Enter blog title"
-                                                />
-                                            </div>
-                                            {/* Description En */}
-                                            <div>
-                                                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                    Description <span className="text-red-500">*</span>
-                                                </label>
-                                                <textarea
-                                                    name="formDescriptionEn"
-                                                    value={formDescriptionEn}
-                                                    onChange={this.handleInputChange}
-                                                    required
-                                                    rows={3}
-                                                    className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-800 outline-none focus:border-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-                                                    placeholder="Enter blog description"
                                                 />
                                             </div>
                                             {/* Alt Text En */}
@@ -580,33 +594,40 @@ class BlogsPage extends Component<{ navigate: (path: string) => void }, BlogsSta
                                                 <span className="flex h-6 w-6 items-center justify-center rounded bg-green-100 text-xs font-bold text-green-600 dark:bg-green-900/30 dark:text-green-400">AR</span>
                                                 المحتوى العربي
                                             </h4>
+                                            {/* Image Upload Ar */}
+                                            <div>
+                                                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                    صورة المقال (عربي)
+                                                </label>
+                                                <div className="flex items-center gap-4">
+                                                    {this.state.formImageAr && (
+                                                        <img
+                                                            src={this.state.formImageAr}
+                                                            alt="Preview"
+                                                            className="h-16 w-16 rounded-lg object-cover"
+                                                        />
+                                                    )}
+                                                    <input
+                                                        type="file"
+                                                        accept="image/*"
+                                                        onChange={(e) => this.handleFileChange(e, 'ar')}
+                                                        className="block w-full text-sm text-gray-500 file:mr-4 file:rounded-lg file:border-0 file:bg-blue-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-900/30 dark:file:text-blue-400"
+                                                    />
+                                                </div>
+                                            </div>
                                             {/* Title Ar */}
                                             <div>
                                                 <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                    العنوان
+                                                    العنوان <span className="text-red-500">*</span>
                                                 </label>
                                                 <input
                                                     type="text"
                                                     name="formTitleAr"
                                                     value={formTitleAr}
                                                     onChange={this.handleInputChange}
+                                                    required
                                                     className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-800 outline-none focus:border-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
                                                     placeholder="أدخل عنوان المقال"
-                                                />
-                                            </div>
-                                            {/* Description Ar */}
-                                            <div>
-                                                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                    الوصف <span className="text-red-500">*</span>
-                                                </label>
-                                                <textarea
-                                                    name="formDescriptionAr"
-                                                    value={formDescriptionAr}
-                                                    onChange={this.handleInputChange}
-                                                    required
-                                                    rows={3}
-                                                    className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-800 outline-none focus:border-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-                                                    placeholder="أدخل وصف المقال"
                                                 />
                                             </div>
                                             {/* Alt Text Ar */}
@@ -666,22 +687,21 @@ class BlogsPage extends Component<{ navigate: (path: string) => void }, BlogsSta
                                         </button>
                                         <button
                                             type="submit"
-                                            disabled={this.state.isSaving}
-                                            className={`rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 ${this.state.isSaving ? 'opacity-70 cursor-not-allowed' : ''}`}
+                                            disabled={isSaving}
+                                            className="flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed min-w-[120px]"
                                         >
-                                            {this.state.isSaving ? (
-                                                <div className="flex items-center gap-2">
+                                            {isSaving ? (
+                                                <>
                                                     <svg className="h-4 w-4 animate-spin text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                                     </svg>
                                                     Saving...
-                                                </div>
+                                                </>
                                             ) : (
                                                 editingId ? 'Save Changes' : 'Create Blog'
                                             )}
                                         </button>
-
                                     </div>
                                 </form>
                             </div>

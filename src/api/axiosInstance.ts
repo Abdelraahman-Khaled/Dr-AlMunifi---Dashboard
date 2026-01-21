@@ -31,6 +31,8 @@ axiosInstance.interceptors.response.use(
         // Handle global errors (e.g., 401 Unauthorized)
         if (error.response && error.response.status === 401) {
             // Logic for logout or redirection
+            localStorage.removeItem("token");
+            window.location.href = "/signin";
         }
         return Promise.reject(error);
     }

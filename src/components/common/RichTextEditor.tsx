@@ -250,7 +250,7 @@ export default class RichTextEditor extends Component<RichTextEditorProps, RichT
               editorStyle={{ direction: direction, textAlign: direction === 'rtl' ? 'right' : 'left' }}
               toolbarClassName="editor-toolbar border-b border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800"
               placeholder={placeholder}
-              stripPastedStyles={true}
+              stripPastedStyles={false}
               textAlignment={direction === 'rtl' ? 'right' : 'left'}
               toolbar={{
                 options: [

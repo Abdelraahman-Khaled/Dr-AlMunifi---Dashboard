@@ -238,14 +238,6 @@ export const getOperationContents = async (operation_id: string): Promise<Operat
  * POST /operations/:id/contents
  */
 export const saveOperationContents = async (operation_id: string, formData: FormData): Promise<void> => {
-    console.log(`Saving Operation ${operation_id} contents (FormData):`);
-    formData.forEach((value, key) => {
-        if (value instanceof File) {
-            console.log(`${key}: File - ${value.name} (${value.size} bytes)`);
-        } else {
-            console.log(`${key}:`, value);
-        }
-    });
 
     await axiosInstance.post(`/operations/${operation_id}/contents`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
@@ -281,14 +273,6 @@ export const createOperation = async (data: Partial<Operation> & { photoFile?: F
     }
     formData.append("operation[is_published]", data.isPublished ? "1" : "0");
 
-    console.log("Creating Operation (FormData):");
-    formData.forEach((value, key) => {
-        if (value instanceof File) {
-            console.log(`${key}: File - ${value.name} (${value.size} bytes)`);
-        } else {
-            console.log(`${key}:`, value);
-        }
-    });
 
     const response = await axiosInstance.post<RawOperationResponse>("/operations", formData, {
         headers: { "Content-Type": "multipart/form-data" },
@@ -325,14 +309,6 @@ export const updateOperation = async (id: string, data: Partial<Operation> & { p
     }
     if (data.isPublished !== undefined) formData.append("operation[is_published]", data.isPublished ? "1" : "0");
 
-    console.log(`Updating Operation ${id} Meta (FormData):`);
-    formData.forEach((value, key) => {
-        if (value instanceof File) {
-             console.log(`${key}: File - ${value.name} (${value.size} bytes)`);
-        } else {
-             console.log(`${key}:`, value);
-        }
-    });
 
     // Note: Some APIs require POST with _method=PUT for multipart/form-data updates
     const response = await axiosInstance.put<RawOperationResponse>(`/operations/${id}`, formData, {
@@ -355,8 +331,6 @@ export const getOperationFAQs = async (operation_id: string): Promise<OperationF
  * POST /operations/:id/faqs
  */
 export const createOperationFAQ = async (operation_id: string, formData: FormData): Promise<void> => {
-    console.log(`Creating FAQ for Operation ${operation_id} (FormData):`);
-    formData.forEach((value, key) => console.log(`${key}:`, value));
 
     await axiosInstance.post(`/operations/${operation_id}/faqs`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
@@ -368,8 +342,6 @@ export const createOperationFAQ = async (operation_id: string, formData: FormDat
  * PUT /operations/:operation_id/faqs/:id
  */
 export const updateOperationFAQ = async (operation_id: string, faqId: string, formData: FormData): Promise<void> => {
-    console.log(`Updating FAQ ${faqId} for Operation ${operation_id} (FormData):`);
-    formData.forEach((value, key) => console.log(`${key}:`, value));
 
     await axiosInstance.put(`/operations/${operation_id}/faqs/${faqId}`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
@@ -397,8 +369,6 @@ export const deleteOperationContent = async (operation_id: string, contentId: st
  * PUT /operations/:operation_id/contents/:id
  */
 export const updateOperationContent = async (operation_id: string, contentId: string, formData: FormData): Promise<void> => {
-    console.log(`Updating Content ${contentId} for Operation ${operation_id} (FormData):`);
-    formData.forEach((value, key) => console.log(`${key}:`, value));
 
     await axiosInstance.put(`/operations/${operation_id}/contents/${contentId}`, formData, {
         headers: { "Content-Type": "multipart/form-data" },

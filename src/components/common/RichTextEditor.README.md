@@ -99,7 +99,6 @@ function MyPage() {
 
   const handleContentChange = (content: string) => {
     setHasChanges(true);
-    console.log('Content updated:', content);
   };
 
   return (
@@ -170,8 +169,6 @@ function MyPage() {
   const handleExport = () => {
     if (editorRef.current) {
       const { json, html } = editorRef.current.getContent();
-      console.log('JSON:', json);
-      console.log('HTML:', html);
       
       // Download as file
       const blob = new Blob([html], { type: 'text/html' });

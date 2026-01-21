@@ -3,12 +3,10 @@ import PageMeta from '../components/common/PageMeta';
 import RichTextEditor from '../components/common/RichTextEditor';
 
 export default function Blank() {
-  const handleContentChange = (content: string) => {
-    console.log('Content changed:', content);
+  const handleContentChange = () => {
   };
 
-  const handleSave = (content: string) => {
-    console.log('Content saved:', content);
+  const handleSave = () => {
     alert('Content saved successfully!');
   };
 
