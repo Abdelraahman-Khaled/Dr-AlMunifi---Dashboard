@@ -15,6 +15,10 @@ export default defineConfig({
       },
     }),
   ],
+  server: {
+    host: true,
+    port: 9101,
+  },
   define: {
     // Fix for draft-js: polyfill global object
     global: 'globalThis',

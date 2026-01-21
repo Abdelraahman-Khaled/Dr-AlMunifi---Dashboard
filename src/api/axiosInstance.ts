@@ -2,7 +2,7 @@ import axios from "axios";
 
 // Create an instance of axios
 const axiosInstance = axios.create({
-    baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api", // Fallback to localhost if env var is missing
+    baseURL: import.meta.env.VITE_API_BASE_URL, // Fallback to localhost if env var is missing
     headers: {
         "Content-Type": "application/json",
     },
