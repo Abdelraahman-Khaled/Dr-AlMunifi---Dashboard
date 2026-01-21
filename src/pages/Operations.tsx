@@ -13,8 +13,14 @@ interface OperationsState {
     viewLanguage: 'en' | 'ar';
 
     // Form State
-    formImage: string;
-    photoFile: File | null;
+    formLandingImage: string;
+    landingPhotoFile: File | null;
+    landingImageId: string | null;
+
+    formContentImage: string;
+    contentPhotoFile: File | null;
+    contentImageId: string | null;
+
     formCategory: string | number;
     formSlug: string;
     formSlugAr: string;
@@ -24,6 +30,7 @@ interface OperationsState {
     formTitleEn: string;
     formDescriptionEn: string;
     formImageAltEn: string;
+    formContentImageAltEn: string;
     formItemTitleEn: string;
     formItemDescriptionEn: string;
 
@@ -31,12 +38,13 @@ interface OperationsState {
     formTitleAr: string;
     formDescriptionAr: string;
     formImageAltAr: string;
+    formContentImageAltAr: string;
     formItemTitleAr: string;
     formItemDescriptionAr: string;
+    
     formIsPublished: boolean;
     isSaving: boolean;
 }
-
 
 // Wrapper for hook usage
 const OperationsPageWrapper = () => {
@@ -54,8 +62,14 @@ class OperationsPage extends Component<{ navigate: (path: string) => void }, Ope
             activeTab: 'en',
             viewLanguage: 'en',
 
-            formImage: '',
-            photoFile: null,
+            formLandingImage: '',
+            landingPhotoFile: null,
+            landingImageId: null,
+
+            formContentImage: '',
+            contentPhotoFile: null,
+            contentImageId: null,
+
             formCategory: CATEGORIES[0].id,
             formSlug: '',
             formSlugAr: '',
@@ -64,18 +78,19 @@ class OperationsPage extends Component<{ navigate: (path: string) => void }, Ope
             formTitleEn: '',
             formDescriptionEn: '',
             formImageAltEn: '',
+            formContentImageAltEn: '',
             formItemTitleEn: '',
             formItemDescriptionEn: '',
 
             formTitleAr: '',
             formDescriptionAr: '',
             formImageAltAr: '',
+            formContentImageAltAr: '',
             formItemTitleAr: '',
             formItemDescriptionAr: '',
             formIsPublished: false,
             isSaving: false,
         };
-
     }
 
     componentDidMount() {
@@ -84,25 +99,29 @@ class OperationsPage extends Component<{ navigate: (path: string) => void }, Ope
 
     loadOperations = async () => {
         try {
-            const operations = await getAllOperations();
+            const operations = (await getAllOperations()).reverse();
             this.setState({ operations });
         } catch (e) {
             console.error('Error loading operations:', e);
         }
     };
 
-    saveOperations = (operations: Operation[]) => {
-        localStorage.setItem('operations', JSON.stringify(operations));
-        this.setState({ operations });
-    };
-
-    handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'landing' | 'content') => {
         const file = e.target.files?.[0];
         if (file) {
-            this.setState({ photoFile: file });
+            if (type === 'landing') {
+                this.setState({ landingPhotoFile: file });
+            } else {
+                this.setState({ contentPhotoFile: file });
+            }
+
             const reader = new FileReader();
             reader.onloadend = () => {
-                this.setState({ formImage: reader.result as string });
+                if (type === 'landing') {
+                    this.setState({ formLandingImage: reader.result as string });
+                } else {
+                    this.setState({ formContentImage: reader.result as string });
+                }
             };
             reader.readAsDataURL(file);
         }
@@ -119,21 +138,30 @@ class OperationsPage extends Component<{ navigate: (path: string) => void }, Ope
                 isModalOpen: true,
                 editingId: operation.id,
 
-                formImage: operation.image,
+                formLandingImage: operation.landingImage || '',
+                landingPhotoFile: null,
+                landingImageId: operation.landingImageId || null,
+
+                formContentImage: operation.contentImage || '',
+                contentPhotoFile: null,
+                contentImageId: operation.contentImageId || null,
+
                 formCategory: getCategoryId(operation.category),
                 formSlug: operation.slug || '',
                 formSlugAr: operation.slugAr || '',
                 formLink: operation.link || '',
 
-                formTitleEn: operation.titleEn,
+                formTitleEn: operation.titleEn || '',
                 formDescriptionEn: operation.descriptionEn || '',
-                formImageAltEn: operation.imageAltEn,
+                formImageAltEn: operation.imageAltEn || '',
+                formContentImageAltEn: operation.contentImageAltEn || '',
                 formItemTitleEn: operation.itemTitleEn || '',
                 formItemDescriptionEn: operation.itemDescriptionEn || '',
 
-                formTitleAr: operation.titleAr,
+                formTitleAr: operation.titleAr || '',
                 formDescriptionAr: operation.descriptionAr || '',
-                formImageAltAr: operation.imageAltAr,
+                formImageAltAr: operation.imageAltAr || '',
+                formContentImageAltAr: operation.contentImageAltAr || '',
                 formItemTitleAr: operation.itemTitleAr || '',
                 formItemDescriptionAr: operation.itemDescriptionAr || '',
                 formIsPublished: operation.isPublished,
@@ -143,8 +171,14 @@ class OperationsPage extends Component<{ navigate: (path: string) => void }, Ope
                 isModalOpen: true,
                 editingId: null,
 
-                formImage: '',
-                photoFile: null,
+                formLandingImage: '',
+                landingPhotoFile: null,
+                landingImageId: null,
+
+                formContentImage: '',
+                contentPhotoFile: null,
+                contentImageId: null,
+
                 formCategory: CATEGORIES[0].id,
                 formSlug: '',
                 formSlugAr: '',
@@ -153,12 +187,14 @@ class OperationsPage extends Component<{ navigate: (path: string) => void }, Ope
                 formTitleEn: '',
                 formDescriptionEn: '',
                 formImageAltEn: '',
+                formContentImageAltEn: '',
                 formItemTitleEn: '',
                 formItemDescriptionEn: '',
 
                 formTitleAr: '',
                 formDescriptionAr: '',
                 formImageAltAr: '',
+                formContentImageAltAr: '',
                 formItemTitleAr: '',
                 formItemDescriptionAr: '',
                 formIsPublished: false,
@@ -170,8 +206,6 @@ class OperationsPage extends Component<{ navigate: (path: string) => void }, Ope
         this.setState({ isModalOpen: false, editingId: null });
     };
 
-
-
     handleSwitchViewLanguage = (lang: 'en' | 'ar') => {
         this.setState({ viewLanguage: lang });
     };
@@ -180,25 +214,32 @@ class OperationsPage extends Component<{ navigate: (path: string) => void }, Ope
         e.preventDefault();
         const {
             editingId,
-            photoFile, formCategory, formSlug, formSlugAr,
-            formTitleEn, formDescriptionEn, formImageAltEn, formItemTitleEn, formItemDescriptionEn,
-            formTitleAr, formDescriptionAr, formImageAltAr, formItemTitleAr, formItemDescriptionAr,
+            landingPhotoFile, landingImageId,
+            contentPhotoFile, contentImageId,
+            formCategory, formSlug, formSlugAr,
+            formTitleEn, formDescriptionEn, formImageAltEn, formContentImageAltEn, formItemTitleEn, formItemDescriptionEn,
+            formTitleAr, formDescriptionAr, formImageAltAr, formContentImageAltAr, formItemTitleAr, formItemDescriptionAr,
             formIsPublished
         } = this.state;
 
-        const operationData: Partial<Operation> & { photoFile?: File } = {
-            photoFile: photoFile || undefined,
+        const operationData: Partial<Operation> & { landingPhotoFile?: File; contentPhotoFile?: File } = {
+            landingPhotoFile: landingPhotoFile || undefined,
+            landingImageId: landingImageId || undefined,
+            contentPhotoFile: contentPhotoFile || undefined,
+            contentImageId: contentImageId || undefined,
             category: formCategory,
             slug: formSlug,
             slugAr: formSlugAr,
             titleEn: formTitleEn,
             descriptionEn: formDescriptionEn,
             imageAltEn: formImageAltEn,
+            contentImageAltEn: formContentImageAltEn,
             itemTitleEn: formItemTitleEn,
             itemDescriptionEn: formItemDescriptionEn,
             titleAr: formTitleAr,
             descriptionAr: formDescriptionAr,
             imageAltAr: formImageAltAr,
+            contentImageAltAr: formContentImageAltAr,
             itemTitleAr: formItemTitleAr,
             itemDescriptionAr: formItemDescriptionAr,
             isPublished: formIsPublished,
@@ -207,7 +248,6 @@ class OperationsPage extends Component<{ navigate: (path: string) => void }, Ope
         this.setState({ isSaving: true });
 
         try {
-
             if (editingId) {
                 await updateOperation(editingId, operationData);
                 toast.success('Operation updated successfully!');
@@ -226,7 +266,6 @@ class OperationsPage extends Component<{ navigate: (path: string) => void }, Ope
         }
     };
 
-
     handleDelete = async (id: string) => {
         if (window.confirm('Are you sure you want to delete this operation?')) {
             try {
@@ -244,9 +283,10 @@ class OperationsPage extends Component<{ navigate: (path: string) => void }, Ope
     render() {
         const {
             operations, isModalOpen, editingId, viewLanguage,
-            formImage, formCategory, formSlug, formSlugAr,
-            formTitleEn, formDescriptionEn, formImageAltEn, formItemTitleEn, formItemDescriptionEn,
-            formTitleAr, formDescriptionAr, formImageAltAr, formItemTitleAr, formItemDescriptionAr
+            formCategory, formSlug, formSlugAr,
+            formTitleEn, formDescriptionEn, formImageAltEn, formContentImageAltEn, formItemTitleEn, formItemDescriptionEn,
+            formTitleAr, formDescriptionAr, formImageAltAr, formContentImageAltAr, formItemTitleAr, formItemDescriptionAr,
+            isSaving
         } = this.state;
 
         return (
@@ -307,12 +347,12 @@ class OperationsPage extends Component<{ navigate: (path: string) => void }, Ope
 
                         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                             {operations.map(operation => {
-                                const title = viewLanguage === 'en' ? operation.titleEn : (operation.titleAr || 'No Arabic Title');
-                                const imageAlt = viewLanguage === 'en' ? operation.imageAltEn : (operation.imageAltAr || 'No Arabic Alt');
                                 const isRtl = viewLanguage === 'ar';
+                                const title = isRtl ? (operation.titleAr || 'Untitled') : operation.titleEn;
+                                const dir = isRtl ? 'rtl' : 'ltr';
 
                                 return (
-                                    <div key={operation.id} className="relative overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]" dir={isRtl ? 'rtl' : 'ltr'}>
+                                    <div key={operation.id} className="relative overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]" dir={dir}>
                                         <div className="absolute top-3 right-3 z-10">
                                             <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${operation.isPublished
                                                 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
@@ -322,18 +362,26 @@ class OperationsPage extends Component<{ navigate: (path: string) => void }, Ope
                                             </span>
                                         </div>
                                         <div className="aspect-video w-full overflow-hidden bg-gray-100 dark:bg-gray-800">
-                                            {operation.image ? (
-                                                <img
-                                                    src={operation.image}
-                                                    alt={imageAlt}
-                                                    className="h-full w-full object-cover"
-                                                />
+                                            {viewLanguage === 'ar' ? (
+                                                operation.contentImage ? (
+                                                    <img
+                                                        src={operation.contentImage}
+                                                        alt={operation.contentImageAltAr || ''}
+                                                        className="h-full w-full object-cover"
+                                                    />
+                                                ) : (
+                                                    <div className="flex h-full items-center justify-center text-gray-400">No Content Image</div>
+                                                )
                                             ) : (
-                                                <div className="flex h-full items-center justify-center text-gray-400">
-                                                    <svg className="h-12 w-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                                    </svg>
-                                                </div>
+                                                operation.landingImage ? (
+                                                    <img
+                                                        src={operation.landingImage}
+                                                        alt={operation.imageAltEn || ''}
+                                                        className="h-full w-full object-cover"
+                                                    />
+                                                ) : (
+                                                    <div className="flex h-full items-center justify-center text-gray-400">No Landing Image</div>
+                                                )
                                             )}
                                         </div>
                                         <div className="p-5">
@@ -352,7 +400,7 @@ class OperationsPage extends Component<{ navigate: (path: string) => void }, Ope
                                                 Slug-en: <span className="font-mono text-xs bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">{operation.slug}</span>
                                             </p>
                                             <p className="mb-4 text-sm text-gray-500 line-clamp-2 dark:text-gray-400">
-                                                Alt: {imageAlt}
+                                                Alt: {viewLanguage === 'ar' ? (operation.contentImageAltAr || '') : (operation.imageAltEn || '')}
                                             </p>
                                             <Link
                                                 to={`/operation/${operation.id}`}
@@ -384,7 +432,7 @@ class OperationsPage extends Component<{ navigate: (path: string) => void }, Ope
                     {/* Modal */}
                     {isModalOpen && (
                         <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overflow-x-hidden bg-black/50 p-4 backdrop-blur-sm">
-                            <div className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white p-6 shadow-xl dark:bg-gray-900">
+                            <div className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white p-6 shadow-xl dark:bg-gray-900">
                                 <div className="mb-6 flex items-center justify-between">
                                     <h3 className="text-xl font-bold text-gray-800 dark:text-white">
                                         {editingId ? 'Edit Operation' : 'Add New Operation'}
@@ -399,27 +447,8 @@ class OperationsPage extends Component<{ navigate: (path: string) => void }, Ope
                                 <form onSubmit={this.handleSubmit} className="space-y-6">
                                     {/* SHARED FIELDS */}
                                     <div className="grid gap-6 sm:grid-cols-2">
-                                        {/* Image Upload */}
-                                        <div className="sm:col-span-2">
-                                            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                Operation Image
-                                            </label>
-                                            <div className="flex items-center gap-4">
-                                                {formImage && (
-                                                    <img
-                                                        src={formImage}
-                                                        alt="Preview"
-                                                        className="h-16 w-16 rounded-lg object-cover"
-                                                    />
-                                                )}
-                                                <input
-                                                    type="file"
-                                                    accept="image/*"
-                                                    onChange={this.handleFileChange}
-                                                    className="block w-full text-sm text-gray-500 file:mr-4 file:rounded-lg file:border-0 file:bg-blue-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-900/30 dark:file:text-blue-400"
-                                                />
-                                            </div>
-                                        </div>
+                                        
+                                
 
                                         {/* Category */}
                                         <div className="sm:col-span-2">
@@ -439,7 +468,50 @@ class OperationsPage extends Component<{ navigate: (path: string) => void }, Ope
                                                 ))}
                                             </select>
                                         </div>
-                                        <div className="sm:col-span-2">
+                                                {/* Image Upload Landing */}
+                                        <div className="rounded-xl border border-gray-100 bg-gray-50/50 p-4 dark:border-gray-800 dark:bg-gray-800/10">
+                                            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                Landing Image <span className="text-xs text-gray-500"></span>
+                                            </label>
+                                            <div className="flex flex-col gap-4">
+                                                {this.state.formLandingImage && (
+                                                    <img
+                                                        src={this.state.formLandingImage}
+                                                        alt="Landing Preview"
+                                                        className="h-32 w-full rounded-lg object-cover"
+                                                    />
+                                                )}
+                                                <input
+                                                    type="file"
+                                                    accept="image/*"
+                                                    onChange={(e) => this.handleFileChange(e, 'landing')}
+                                                    className="block w-full text-sm text-gray-500 file:mr-4 file:rounded-lg file:border-0 file:bg-blue-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-900/30 dark:file:text-blue-400"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Image Upload Content */}
+                                        <div className="rounded-xl border border-gray-100 bg-gray-50/50 p-4 dark:border-gray-800 dark:bg-gray-800/10">
+                                            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                Content Image <span className="text-xs text-gray-500"></span>
+                                            </label>
+                                            <div className="flex flex-col gap-4">
+                                                {this.state.formContentImage && (
+                                                    <img
+                                                        src={this.state.formContentImage}
+                                                        alt="Content Preview"
+                                                        className="h-32 w-full rounded-lg object-cover"
+                                                    />
+                                                )}
+                                                <input
+                                                    type="file"
+                                                    accept="image/*"
+                                                    onChange={(e) => this.handleFileChange(e, 'content')}
+                                                    className="block w-full text-sm text-gray-500 file:mr-4 file:rounded-lg file:border-0 file:bg-blue-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-900/30 dark:file:text-blue-400"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div>
                                             <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
                                                 Slug <span className="text-red-500">*</span>
                                             </label>
@@ -453,7 +525,7 @@ class OperationsPage extends Component<{ navigate: (path: string) => void }, Ope
                                                 placeholder="my-operation-slug"
                                             />
                                         </div>
-                                        <div className="sm:col-span-2">
+                                        <div>
                                             <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
                                                 Slug Ar<span className="text-red-500">*</span>
                                             </label>
@@ -494,7 +566,6 @@ class OperationsPage extends Component<{ navigate: (path: string) => void }, Ope
                                                 <span className="flex h-6 w-6 items-center justify-center rounded bg-blue-100 text-xs font-bold text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">EN</span>
                                                 English Content
                                             </h4>
-                                            {/* Title En */}
                                             <div>
                                                 <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
                                                     Title <span className="text-red-500">*</span>
@@ -509,25 +580,22 @@ class OperationsPage extends Component<{ navigate: (path: string) => void }, Ope
                                                     placeholder="Enter operation title"
                                                 />
                                             </div>
-                                            {/* Description En */}
                                             <div>
                                                 <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                    Description <span className="text-red-500">*</span>
+                                                    Description
                                                 </label>
                                                 <textarea
                                                     name="formDescriptionEn"
                                                     value={formDescriptionEn}
                                                     onChange={this.handleInputChange}
-                                                    required
                                                     rows={3}
                                                     className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-800 outline-none focus:border-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-                                                    placeholder="Enter operation description"
+                                                    placeholder="Enter short description"
                                                 />
                                             </div>
-                                            {/* Alt Text En */}
                                             <div>
                                                 <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                    Image Alt Text
+                                                    Landing Image Alt
                                                 </label>
                                                 <input
                                                     type="text"
@@ -535,11 +603,22 @@ class OperationsPage extends Component<{ navigate: (path: string) => void }, Ope
                                                     value={formImageAltEn}
                                                     onChange={this.handleInputChange}
                                                     className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-800 outline-none focus:border-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-                                                    placeholder="Enter image description"
+                                                    placeholder="Enter landing image alt"
                                                 />
                                             </div>
-
-                                            {/* Meta Title En */}
+                                            <div>
+                                                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                    Content Image Alt
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    name="formContentImageAltEn"
+                                                    value={formContentImageAltEn}
+                                                    onChange={this.handleInputChange}
+                                                    className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-800 outline-none focus:border-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                                                    placeholder="Enter content image alt"
+                                                />
+                                            </div>
                                             <div>
                                                 <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
                                                     Meta Title
@@ -553,8 +632,6 @@ class OperationsPage extends Component<{ navigate: (path: string) => void }, Ope
                                                     placeholder="SEO Title"
                                                 />
                                             </div>
-
-                                            {/* Meta Description En */}
                                             <div>
                                                 <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
                                                     Meta Description
@@ -576,39 +653,36 @@ class OperationsPage extends Component<{ navigate: (path: string) => void }, Ope
                                                 <span className="flex h-6 w-6 items-center justify-center rounded bg-green-100 text-xs font-bold text-green-600 dark:bg-green-900/30 dark:text-green-400">AR</span>
                                                 المحتوى العربي
                                             </h4>
-                                            {/* Title Ar */}
                                             <div>
                                                 <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                    العنوان
+                                                    العنوان <span className="text-red-500">*</span>
                                                 </label>
                                                 <input
                                                     type="text"
                                                     name="formTitleAr"
                                                     value={formTitleAr}
                                                     onChange={this.handleInputChange}
+                                                    required
                                                     className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-800 outline-none focus:border-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-                                                    placeholder="أدخل عنوان المقال"
+                                                    placeholder="أدخل عنوان العملية"
                                                 />
                                             </div>
-                                            {/* Description Ar */}
                                             <div>
                                                 <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                    الوصف <span className="text-red-500">*</span>
+                                                    الوصف
                                                 </label>
                                                 <textarea
                                                     name="formDescriptionAr"
                                                     value={formDescriptionAr}
                                                     onChange={this.handleInputChange}
-                                                    required
                                                     rows={3}
                                                     className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-800 outline-none focus:border-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-                                                    placeholder="أدخل وصف المقال"
+                                                    placeholder="أدخل وصفاً قصيراً"
                                                 />
                                             </div>
-                                            {/* Alt Text Ar */}
                                             <div>
                                                 <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                    نص بديل للصورة
+                                                    نص بديل لصورة الغلاف
                                                 </label>
                                                 <input
                                                     type="text"
@@ -616,10 +690,22 @@ class OperationsPage extends Component<{ navigate: (path: string) => void }, Ope
                                                     value={formImageAltAr}
                                                     onChange={this.handleInputChange}
                                                     className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-800 outline-none focus:border-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-                                                    placeholder="أدخل وصف الصورة"
+                                                    placeholder="أدخل وصف صورة الغلاف"
                                                 />
                                             </div>
-                                            {/* Meta Title Ar */}
+                                            <div>
+                                                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                    نص بديل لصورة المحتوى
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    name="formContentImageAltAr"
+                                                    value={formContentImageAltAr}
+                                                    onChange={this.handleInputChange}
+                                                    className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-800 outline-none focus:border-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                                                    placeholder="أدخل وصف صورة المحتوى"
+                                                />
+                                            </div>
                                             <div>
                                                 <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
                                                     عنوان SEO
@@ -633,8 +719,6 @@ class OperationsPage extends Component<{ navigate: (path: string) => void }, Ope
                                                     placeholder="عنوان SEO"
                                                 />
                                             </div>
-
-                                            {/* Meta Description Ar */}
                                             <div>
                                                 <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
                                                     وصف SEO
@@ -649,7 +733,6 @@ class OperationsPage extends Component<{ navigate: (path: string) => void }, Ope
                                                 />
                                             </div>
                                         </div>
-
                                     </div>
 
                                     <div className="mt-6 flex justify-end gap-3">
@@ -662,22 +745,21 @@ class OperationsPage extends Component<{ navigate: (path: string) => void }, Ope
                                         </button>
                                         <button
                                             type="submit"
-                                            disabled={this.state.isSaving}
-                                            className={`rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 ${this.state.isSaving ? 'opacity-70 cursor-not-allowed' : ''}`}
+                                            disabled={isSaving}
+                                            className="flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed min-w-[120px]"
                                         >
-                                            {this.state.isSaving ? (
-                                                <div className="flex items-center gap-2">
+                                            {isSaving ? (
+                                                <>
                                                     <svg className="h-4 w-4 animate-spin text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                                     </svg>
                                                     Saving...
-                                                </div>
+                                                </>
                                             ) : (
                                                 editingId ? 'Save Changes' : 'Create Operation'
                                             )}
                                         </button>
-
                                     </div>
                                 </form>
                             </div>

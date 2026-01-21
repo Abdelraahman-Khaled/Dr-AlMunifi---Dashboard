@@ -486,7 +486,6 @@ class OperationDetails extends Component<{ params: { id: string } }, OperationDe
 
         const isRtl = viewLanguage === 'ar';
         const title = isRtl ? (operation.titleAr || 'Untitled') : operation.titleEn;
-        const imageAlt = isRtl ? (operation.imageAltAr || '') : operation.imageAltEn;
         const dir = isRtl ? 'rtl' : 'ltr';
 
         return (
@@ -515,16 +514,30 @@ class OperationDetails extends Component<{ params: { id: string } }, OperationDe
                     </div>
                 </div>
 
-                {/* Hero Image */}
-                {operation.image && (
-                    <div className="mb-8 overflow-hidden rounded-2xl bg-gray-100">
-                        <img
-                            src={operation.image}
-                            alt={imageAlt}
-                            className="h-auto w-full object-cover"
-                        />
-                    </div>
-                )}
+                {/* Hero Image - Conditional based on language */}
+                <div className="mb-8 overflow-hidden rounded-2xl bg-gray-100 shadow-sm">
+                    {viewLanguage === 'ar' ? (
+                        operation.contentImage ? (
+                            <img
+                                src={operation.contentImage}
+                                alt={operation.contentImageAltAr || ''}
+                                className="h-auto w-full object-cover"
+                            />
+                        ) : (
+                            <div className="flex h-48 items-center justify-center text-gray-400">No Content Image</div>
+                        )
+                    ) : (
+                        operation.landingImage ? (
+                            <img
+                                src={operation.landingImage}
+                                alt={operation.imageAltEn || ''}
+                                className="h-auto w-full object-cover"
+                            />
+                        ) : (
+                            <div className="flex h-48 items-center justify-center text-gray-400">No Landing Image</div>
+                        )
+                    )}
+                </div>
 
                 {/* Meta / Category */}
                 <div className="mb-4 flex items-center gap-4">

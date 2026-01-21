@@ -33,7 +33,6 @@ export const getCategoryId = (idOrName: string | number): number => {
 };
 
 // --- Internal Types (CamelCase) ---
-// These match what the UI expects
 export interface OperationBlock {
     id: string;
     contentEn: string;
@@ -59,14 +58,20 @@ export interface OperationImage {
     altEn: string;
     altAr: string;
     relatedBlockId: string | "global" | null;
-    file?: File; // For newly uploaded images
+    file?: File;
 }
 
 export interface Operation {
     id: string;
-    image: string; // URL or Base64
+    image: string; // URL for list view (landing image)
+    landingImage: string;
+    landingImageId?: string;
+    contentImage: string;
+    contentImageId?: string;
     imageAltEn: string;
     imageAltAr: string;
+    contentImageAltEn: string;
+    contentImageAltAr: string;
     titleEn: string;
     titleAr: string;
     descriptionEn: string;
@@ -87,11 +92,19 @@ export interface Operation {
 }
 
 // --- API Response Types (SnakeCase) ---
-// These match the raw server response
+interface RawOperationPhoto {
+    id: number;
+    photo_url: string;
+    is_landing: boolean;
+    alt_ar: string;
+    alt_en: string;
+}
+
 interface RawOperationResponse {
     id: number;
     photo: string | null;
     photo_url?: string;
+    photos?: RawOperationPhoto[];
     title_ar: string;
     title_en: string;
     description_ar: string;
@@ -107,31 +120,41 @@ interface RawOperationResponse {
     slug_ar: string;
     is_published: number | boolean;
     created_at: string;
-    // Note: blocks and faqs might need specific raw types if they are returned by getById
 }
 
 // --- Mapper Logic ---
-const mapRawToOperation = (raw: RawOperationResponse): Operation => ({
-    id: raw?.id?.toString() || "",
-    image: raw.photo_url || "", // Assuming photo_url is provided or derived from photo
-    imageAltEn: raw.image_alt_text_en || "",
-    imageAltAr: raw.image_alt_text_ar || "",
-    titleEn: raw.title_en || "",
-    titleAr: raw.title_ar || "",
-    descriptionEn: raw.description_en || "",
-    descriptionAr: raw.description_ar || "",
-    itemTitleEn: raw.meta_title_en || "",
-    itemDescriptionEn: raw.meta_description_en || "",
-    itemTitleAr: raw.meta_title_ar || "",
-    itemDescriptionAr: raw.meta_description_ar || "",
-    category: getCategoryName(raw.category),
-    slug: raw.slug || "",
-    slugAr: raw.slug_ar || "",
-    isPublished: !!raw.is_published,
-    blocks: [], // Map these if the API returns them
-    faqs: [],   // Map these if the API returns them
-    createdAt: raw.created_at,
-});
+const mapRawToOperation = (raw: RawOperationResponse): Operation => {
+    const landingPhoto = raw.photos?.find(p => p.is_landing);
+    const contentPhoto = raw.photos?.find(p => !p.is_landing);
+
+    return {
+        id: raw?.id?.toString() || "",
+        image: landingPhoto?.photo_url || raw.photo_url || "",
+        landingImage: landingPhoto?.photo_url || raw.photo_url || "",
+        landingImageId: landingPhoto?.id?.toString(),
+        contentImage: contentPhoto?.photo_url || "",
+        contentImageId: contentPhoto?.id?.toString(),
+        imageAltEn: landingPhoto?.alt_en || raw.image_alt_text_en || "",
+        imageAltAr: landingPhoto?.alt_ar || raw.image_alt_text_ar || "",
+        contentImageAltEn: contentPhoto?.alt_en || "",
+        contentImageAltAr: contentPhoto?.alt_ar || "",
+        titleEn: raw.title_en || "",
+        titleAr: raw.title_ar || "",
+        descriptionEn: raw.description_en || "",
+        descriptionAr: raw.description_ar || "",
+        itemTitleEn: raw.meta_title_en || "",
+        itemDescriptionEn: raw.meta_description_en || "",
+        itemTitleAr: raw.meta_title_ar || "",
+        itemDescriptionAr: raw.meta_description_ar || "",
+        category: getCategoryName(raw.category),
+        slug: raw.slug || "",
+        slugAr: raw.slug_ar || "",
+        isPublished: !!raw.is_published,
+        blocks: [],
+        faqs: [],
+        createdAt: raw.created_at,
+    };
+};
 
 interface RawFAQResponse {
     id: number;
@@ -149,7 +172,7 @@ const mapRawToFAQ = (raw: RawFAQResponse): OperationFAQ => ({
     id: raw.id.toString(),
     questionEn: raw.question_en || "",
     questionAr: raw.question_ar || "",
-    answerEn: "", // JSON format not provided by GET faqs, we'll use HTML
+    answerEn: "",
     answerAr: "",
     answerHtmlEn: raw.answer_en || "",
     answerHtmlAr: raw.answer_ar || ""
@@ -157,19 +180,11 @@ const mapRawToFAQ = (raw: RawFAQResponse): OperationFAQ => ({
 
 // --- API Methods ---
 
-/**
- * Get all operations
- * GET /operations
- */
 export const getAllOperations = async (): Promise<Operation[]> => {
     const response = await axiosInstance.get<RawOperationResponse[]>("/operations");
     return response.data.map(mapRawToOperation);
 };
 
-/**
- * Get a single operation by ID
- * GET /operations/:id
- */
 export const getOperationById = async (id: string): Promise<Operation> => {
     const response = await axiosInstance.get<RawOperationResponse>(`/operations/${id}`);
     return mapRawToOperation(response.data);
@@ -194,10 +209,6 @@ interface RawContentBlock {
     photos: RawPhoto[];
 }
 
-/**
- * Get operation contents (blocks, gallery)
- * GET /operations/:id/contents
- */
 export const getOperationContents = async (operation_id: string): Promise<OperationContents> => {
     const response = await axiosInstance.get<RawContentBlock[]>(`/operations/${operation_id}/contents`);
 
@@ -215,7 +226,7 @@ export const getOperationContents = async (operation_id: string): Promise<Operat
             raw.photos.forEach((photo: any) => {
                 if (photo && photo.url) {
                     gallery.push({
-                        id: photo.cp_id ? photo.cp_id.toString() : photo.url, // Use cp_id if available
+                        id: photo.cp_id ? photo.cp_id.toString() : photo.url,
                         url: photo.url,
                         name: photo.url.split('/').pop() || 'image.webp',
                         altEn: photo.alt_en || '',
@@ -227,36 +238,33 @@ export const getOperationContents = async (operation_id: string): Promise<Operat
         }
     });
 
-    return {
-        blocks,
-        gallery
-    };
+    return { blocks, gallery };
 };
 
-/**
- * Save operation structured content
- * POST /operations/:id/contents
- */
 export const saveOperationContents = async (operation_id: string, formData: FormData): Promise<void> => {
-
     await axiosInstance.post(`/operations/${operation_id}/contents`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
     });
 };
 
-/**
- * Create a new operation using FormData
- * POST /operations
- */
-export const createOperation = async (data: Partial<Operation> & { photoFile?: File }): Promise<Operation> => {
+export const createOperation = async (data: Partial<Operation> & { landingPhotoFile?: File; contentPhotoFile?: File }): Promise<Operation> => {
     const formData = new FormData();
 
-    if (data.photoFile) {
-        formData.append("operation[photo]", data.photoFile);
+    // Landing Image (Index 0)
+    if (data.landingPhotoFile) {
+        formData.append("operation[operation_photos_attributes][0][photo]", data.landingPhotoFile);
     }
+    formData.append("operation[operation_photos_attributes][0][is_landing]", "1");
+    formData.append("operation[operation_photos_attributes][0][alt_ar]", data.imageAltAr || "");
+    formData.append("operation[operation_photos_attributes][0][alt_en]", data.imageAltEn || "");
 
-    if (data.imageAltAr) formData.append("operation[image_alt_text_ar]", data.imageAltAr);
-    if (data.imageAltEn) formData.append("operation[image_alt_text_en]", data.imageAltEn);
+    // Content Image (Index 1)
+    if (data.contentPhotoFile) {
+        formData.append("operation[operation_photos_attributes][1][photo]", data.contentPhotoFile);
+    }
+    formData.append("operation[operation_photos_attributes][1][is_landing]", "0");
+    formData.append("operation[operation_photos_attributes][1][alt_ar]", data.contentImageAltAr || "");
+    formData.append("operation[operation_photos_attributes][1][alt_en]", data.contentImageAltEn || "");
 
     if (data.titleAr) formData.append("operation[title_ar]", data.titleAr);
     if (data.titleEn) formData.append("operation[title_en]", data.titleEn);
@@ -273,26 +281,36 @@ export const createOperation = async (data: Partial<Operation> & { photoFile?: F
     }
     formData.append("operation[is_published]", data.isPublished ? "1" : "0");
 
-
     const response = await axiosInstance.post<RawOperationResponse>("/operations", formData, {
         headers: { "Content-Type": "multipart/form-data" },
     });
     return mapRawToOperation(response.data);
 };
 
-/**
- * Update an existing operation using FormData
- * PUT /operations/:id
- */
-export const updateOperation = async (id: string, data: Partial<Operation> & { photoFile?: File }): Promise<Operation> => {
+export const updateOperation = async (id: string, data: Partial<Operation> & { landingPhotoFile?: File; contentPhotoFile?: File }): Promise<Operation> => {
     const formData = new FormData();
 
-    if (data.photoFile) {
-        formData.append("operation[photo]", data.photoFile);
+    // Landing Image (Index 0)
+    if (data.landingImageId) {
+        formData.append("operation[operation_photos_attributes][0][id]", data.landingImageId);
     }
+    if (data.landingPhotoFile) {
+        formData.append("operation[operation_photos_attributes][0][photo]", data.landingPhotoFile);
+    }
+    formData.append("operation[operation_photos_attributes][0][is_landing]", "1");
+    formData.append("operation[operation_photos_attributes][0][alt_ar]", data.imageAltAr || "");
+    formData.append("operation[operation_photos_attributes][0][alt_en]", data.imageAltEn || "");
 
-    if (data.imageAltAr) formData.append("operation[image_alt_text_ar]", data.imageAltAr);
-    if (data.imageAltEn) formData.append("operation[image_alt_text_en]", data.imageAltEn);
+    // Content Image (Index 1)
+    if (data.contentImageId) {
+        formData.append("operation[operation_photos_attributes][1][id]", data.contentImageId);
+    }
+    if (data.contentPhotoFile) {
+        formData.append("operation[operation_photos_attributes][1][photo]", data.contentPhotoFile);
+    }
+    formData.append("operation[operation_photos_attributes][1][is_landing]", "0");
+    formData.append("operation[operation_photos_attributes][1][alt_ar]", data.contentImageAltAr || "");
+    formData.append("operation[operation_photos_attributes][1][alt_en]", data.contentImageAltEn || "");
 
     if (data.titleAr) formData.append("operation[title_ar]", data.titleAr);
     if (data.titleEn) formData.append("operation[title_en]", data.titleEn);
@@ -309,76 +327,43 @@ export const updateOperation = async (id: string, data: Partial<Operation> & { p
     }
     if (data.isPublished !== undefined) formData.append("operation[is_published]", data.isPublished ? "1" : "0");
 
-
-    // Note: Some APIs require POST with _method=PUT for multipart/form-data updates
     const response = await axiosInstance.put<RawOperationResponse>(`/operations/${id}`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
     });
     return mapRawToOperation(response.data);
 };
 
-/**
- * Get operation FAQs
- * GET /operations/:id/faqs
- */
 export const getOperationFAQs = async (operation_id: string): Promise<OperationFAQ[]> => {
     const response = await axiosInstance.get<RawFAQResponse[]>(`/operations/${operation_id}/faqs`);
     return response.data.map(mapRawToFAQ);
 };
 
-/**
- * Create a new FAQ for an operation
- * POST /operations/:id/faqs
- */
 export const createOperationFAQ = async (operation_id: string, formData: FormData): Promise<void> => {
-
     await axiosInstance.post(`/operations/${operation_id}/faqs`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
     });
 };
 
-/**
- * Update an existing FAQ
- * PUT /operations/:operation_id/faqs/:id
- */
 export const updateOperationFAQ = async (operation_id: string, faqId: string, formData: FormData): Promise<void> => {
-
     await axiosInstance.put(`/operations/${operation_id}/faqs/${faqId}`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
     });
 };
 
-/**
- * Delete a specific FAQ
- * DELETE /operations/:id/faqs/:faq_id
- */
 export const deleteOperationFAQ = async (operation_id: string, faqId: string): Promise<void> => {
     await axiosInstance.delete(`/operations/${operation_id}/faqs/${faqId}`);
 };
 
-/**
- * Delete a specific operation content section
- * DELETE /operations/:operation_id/contents/:id
- */
 export const deleteOperationContent = async (operation_id: string, contentId: string): Promise<void> => {
     await axiosInstance.delete(`/operations/${operation_id}/contents/${contentId}`);
 };
 
-/**
- * Update a specific operation content section
- * PUT /operations/:operation_id/contents/:id
- */
 export const updateOperationContent = async (operation_id: string, contentId: string, formData: FormData): Promise<void> => {
-
     await axiosInstance.put(`/operations/${operation_id}/contents/${contentId}`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
     });
 };
 
-/**
- * Delete an operation
- * DELETE /operations/:id
- */
 export const deleteOperation = async (id: string): Promise<void> => {
     await axiosInstance.delete(`/operations/${id}`);
 };
