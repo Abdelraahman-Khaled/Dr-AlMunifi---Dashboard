@@ -75,6 +75,8 @@ export interface Blog {
     imageAltAr: string;
     titleEn: string;
     titleAr: string;
+    descriptionEn: string;
+    descriptionAr: string;
     itemTitleEn: string;
     itemDescriptionEn: string;
     itemTitleAr: string;
@@ -108,6 +110,8 @@ interface RawBlogResponse {
     slug: string;
     slug_ar: string;
     photos: RawBlogPhoto[];
+    description_ar: string;
+    description_en: string;
     meta_description_ar: string;
     meta_description_en: string;
     meta_title_ar: string;
@@ -132,6 +136,8 @@ const mapRawToBlog = (raw: RawBlogResponse): Blog => {
         imageAltAr: photoAr?.alt || "",
         titleEn: raw.title_en || "",
         titleAr: raw.title_ar || "",
+        descriptionEn: raw.description_en || "",
+        descriptionAr: raw.description_ar || "",
         itemTitleEn: raw.meta_title_en || "",
         itemDescriptionEn: raw.meta_description_en || "",
         itemTitleAr: raw.meta_title_ar || "",
@@ -280,6 +286,9 @@ export const createBlog = async (data: Partial<Blog> & { photoFileAr?: File; pho
     }
 
     if (data.titleAr) formData.append("blog[title_ar]", data.titleAr);
+    if (data.descriptionAr) formData.append("blog[description_ar]", data.descriptionAr);
+    if (data.descriptionEn) formData.append("blog[description_en]", data.descriptionEn);
+
     if (data.titleEn) formData.append("blog[title_en]", data.titleEn);
     if (data.itemTitleAr) formData.append("blog[meta_title_ar]", data.itemTitleAr);
     if (data.itemTitleEn) formData.append("blog[meta_title_en]", data.itemTitleEn);
@@ -321,6 +330,9 @@ export const updateBlog = async (id: string, data: Partial<Blog> & { photoFileAr
     }
 
     if (data.titleAr) formData.append("blog[title_ar]", data.titleAr);
+    if (data.descriptionAr) formData.append("blog[description_ar]", data.descriptionAr);
+    if (data.descriptionEn) formData.append("blog[description_en]", data.descriptionEn);
+
     if (data.titleEn) formData.append("blog[title_en]", data.titleEn);
     if (data.itemTitleAr) formData.append("blog[meta_title_ar]", data.itemTitleAr);
     if (data.itemTitleEn) formData.append("blog[meta_title_en]", data.itemTitleEn);

@@ -28,12 +28,14 @@ interface BlogsState {
 
     // English Fields
     formTitleEn: string;
+    formDescriptionEn: string;
     formImageAltEn: string;
     formItemTitleEn: string;
     formItemDescriptionEn: string;
 
     // Arabic Fields
     formTitleAr: string;
+    formDescriptionAr: string;
     formImageAltAr: string;
     formItemTitleAr: string;
     formItemDescriptionAr: string;
@@ -69,11 +71,13 @@ class BlogsPage extends Component<{ navigate: (path: string) => void }, BlogsSta
             formLink: '',
 
             formTitleEn: '',
+            formDescriptionEn: '',
             formImageAltEn: '',
             formItemTitleEn: '',
             formItemDescriptionEn: '',
 
             formTitleAr: '',
+            formDescriptionAr: '',
             formImageAltAr: '',
             formItemTitleAr: '',
             formItemDescriptionAr: '',
@@ -144,11 +148,13 @@ class BlogsPage extends Component<{ navigate: (path: string) => void }, BlogsSta
                 formLink: blog.link || '',
 
                 formTitleEn: blog.titleEn,
+                formDescriptionEn: blog.descriptionEn || '',
                 formImageAltEn: blog.imageAltEn,
                 formItemTitleEn: blog.itemTitleEn || '',
                 formItemDescriptionEn: blog.itemDescriptionEn || '',
 
                 formTitleAr: blog.titleAr,
+                formDescriptionAr: blog.descriptionAr || '',
                 formImageAltAr: blog.imageAltAr,
                 formItemTitleAr: blog.itemTitleAr || '',
                 formItemDescriptionAr: blog.itemDescriptionAr || '',
@@ -171,11 +177,13 @@ class BlogsPage extends Component<{ navigate: (path: string) => void }, BlogsSta
                 formLink: '',
 
                 formTitleEn: '',
+                formDescriptionEn: '',
                 formImageAltEn: '',
                 formItemTitleEn: '',
                 formItemDescriptionEn: '',
 
                 formTitleAr: '',
+                formDescriptionAr: '',
                 formImageAltAr: '',
                 formItemTitleAr: '',
                 formItemDescriptionAr: '',
@@ -199,8 +207,8 @@ class BlogsPage extends Component<{ navigate: (path: string) => void }, BlogsSta
         const {
             editingId,
             photoFileAr, photoFileEn, formCategory, formSlug, formSlugAr,
-            formTitleEn, formImageAltEn, formItemTitleEn, formItemDescriptionEn,
-            formTitleAr, formImageAltAr, formItemTitleAr, formItemDescriptionAr,
+            formTitleEn, formDescriptionEn, formImageAltEn, formItemTitleEn, formItemDescriptionEn,
+            formTitleAr, formDescriptionAr, formImageAltAr, formItemTitleAr, formItemDescriptionAr,
             formIsPublished
         } = this.state;
 
@@ -213,10 +221,12 @@ class BlogsPage extends Component<{ navigate: (path: string) => void }, BlogsSta
             slug: formSlug,
             slugAr: formSlugAr,
             titleEn: formTitleEn,
+            descriptionEn: formDescriptionEn,
             imageAltEn: formImageAltEn,
             itemTitleEn: formItemTitleEn,
             itemDescriptionEn: formItemDescriptionEn,
             titleAr: formTitleAr,
+            descriptionAr: formDescriptionAr,
             imageAltAr: formImageAltAr,
             itemTitleAr: formItemTitleAr,
             itemDescriptionAr: formItemDescriptionAr,
@@ -262,8 +272,8 @@ class BlogsPage extends Component<{ navigate: (path: string) => void }, BlogsSta
         const {
             blogs, isModalOpen, editingId, viewLanguage,
             formCategory, formSlug, formSlugAr,
-            formTitleEn, formImageAltEn, formItemTitleEn, formItemDescriptionEn,
-            formTitleAr, formImageAltAr, formItemTitleAr, formItemDescriptionAr,
+            formTitleEn, formDescriptionEn, formImageAltEn, formItemTitleEn, formItemDescriptionEn,
+            formTitleAr, formDescriptionAr, formImageAltAr, formItemTitleAr, formItemDescriptionAr,
             isSaving
         } = this.state;
 
@@ -542,6 +552,21 @@ class BlogsPage extends Component<{ navigate: (path: string) => void }, BlogsSta
                                                     placeholder="Enter blog title"
                                                 />
                                             </div>
+                                            {/* Description En */}
+                                            <div>
+                                                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                    Description <span className="text-red-500">*</span>
+                                                </label>
+                                                <textarea
+                                                    name="formDescriptionEn"
+                                                    value={formDescriptionEn}
+                                                    onChange={this.handleInputChange}
+                                                    required
+                                                    rows={3}
+                                                    className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-800 outline-none focus:border-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                                                    placeholder="Enter blog description"
+                                                />
+                                            </div>
                                             {/* Alt Text En */}
                                             <div>
                                                 <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -628,6 +653,21 @@ class BlogsPage extends Component<{ navigate: (path: string) => void }, BlogsSta
                                                     required
                                                     className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-800 outline-none focus:border-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
                                                     placeholder="أدخل عنوان المقال"
+                                                />
+                                            </div>
+                                            {/* Description Ar */}
+                                            <div>
+                                                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                    الوصف <span className="text-red-500">*</span>
+                                                </label>
+                                                <textarea
+                                                    name="formDescriptionAr"
+                                                    value={formDescriptionAr}
+                                                    onChange={this.handleInputChange}
+                                                    required
+                                                    rows={3}
+                                                    className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-800 outline-none focus:border-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                                                    placeholder="أدخل وصف المقال"
                                                 />
                                             </div>
                                             {/* Alt Text Ar */}
