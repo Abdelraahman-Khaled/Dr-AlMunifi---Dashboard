@@ -374,8 +374,7 @@ class OperationDetails extends Component<{ params: { id: string } }, OperationDe
         const formData = new FormData();
         formData.append('content[content_en]', htmlEn);
         formData.append('content[content_ar]', htmlAr);
-        formData.append('content[is_published]', operation.isPublished ? '1' : '0');
-
+        formData.append('content[is_published]', '1');
         // Append images for THIS section
         // We send EVERYTHING so the backend knows about new uploads AND alt changes for existing ones
         const sectionImages = (operation.gallery || []).filter(img => img.relatedBlockId === blockId);
@@ -443,7 +442,7 @@ class OperationDetails extends Component<{ params: { id: string } }, OperationDe
 
         formData.append('content[content_en]', mergedEnHtml);
         formData.append('content[content_ar]', mergedArHtml);
-        formData.append('content[is_published]', operation.isPublished ? '1' : '0');
+        formData.append('content[is_published]',"1");
 
         // Append all images (Merged)
         // We send EVERYTHING so the backend knows about new uploads AND alt changes for existing ones
