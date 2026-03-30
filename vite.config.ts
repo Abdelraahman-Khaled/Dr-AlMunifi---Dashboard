@@ -4,6 +4,7 @@ import svgr from "vite-plugin-svgr";
 
 // https://vite.dev/config/
 export default defineConfig({
+  base: "./", // 🔥 دي المفتاح
   plugins: [
     react(),
     svgr({
@@ -15,12 +16,8 @@ export default defineConfig({
       },
     }),
   ],
-  server: {
-    host: true,
-    port: 9101,
-  },
   define: {
     // Fix for draft-js: polyfill global object
-    global: 'globalThis',
+    global: "globalThis",
   },
 });

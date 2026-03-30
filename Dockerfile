@@ -20,6 +20,6 @@ COPY --from=build /app/package*.json ./
 
 RUN npm install -g serve
 
-EXPOSE 9101
+EXPOSE 3000
 
-CMD ["serve", "-s", "dist", "-l", "9101"]
+CMD ["serve", "-s", "dist", "-l", "3000"]
