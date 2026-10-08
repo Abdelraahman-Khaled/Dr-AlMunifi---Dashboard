@@ -6,6 +6,7 @@ import Label from "../form/Label";
 import Input from "../form/input/InputField";
 import Button from "../ui/button/Button";
 import { signIn } from "../../api/auth";
+import { setToken } from "../../api/token";
 
 export default function SignInForm() {
   const [showPassword, setShowPassword] = useState(false);
@@ -21,9 +22,11 @@ export default function SignInForm() {
     try {
       const response = await signIn({ email, password });
 
-      if (response.token) {
-        localStorage.setItem("token", response.token);
+      if (!response.token) {
+        // Without a token ProtectedRoute would bounce straight back to /signin
+        throw new Error("Sign-in failed: no token returned by the server.");
       }
+      setToken(response.token);
 
       toast.success("Signed in successfully!");
       navigate("/"); // Redirect to dashboard

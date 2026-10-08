@@ -1,395 +1,309 @@
-.rich-text-editor-wrapper {
-    position: relative;
-    z-index: 10;
-    overflow: visible !important;
+/* Tiptap Editor Styles */
+
+.tiptap-editor-wrapper {
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  background-color: #ffffff;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
-.editor-content {
-    min-height: var(--editor-min-height);
-    font-size: 0.875rem;
-    line-height: 1.5;
-    z-index: 1;
+.dark .tiptap-editor-wrapper {
+  border-color: #374151;
+  background-color: #111827;
 }
 
-/* Editor wrapper */
-.editor-wrapper {
-    width: 100%;
-    overflow: visible !important;
+.tiptap-editor-wrapper:focus-within {
+  border-color: #3b82f6;
+  ring: 4px rgba(59, 130, 246, 0.1);
 }
 
-/* Toolbar styling */
-.editor-toolbar {
-    border-radius: 0.5rem 0.5rem 0 0;
-    padding: 0.5rem;
-    z-index: 50 !important;
-    position: relative;
-    overflow: visible !important;
+/* Toolbar */
+.tiptap-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+  border-bottom: 1px solid #e5e7eb;
+  background-color: #f9fafb;
+  padding: 0.5rem;
+  position: sticky;
+  top: 0;
+  z-index: 20;
 }
 
-.editor-content h1 {
-    font-size: 2rem;
-    font-weight: bold;
-    margin: 1rem 0;
+.dark .tiptap-toolbar {
+  border-color: #374151;
+  background-color: #1f2937;
 }
 
-.editor-content h2 {
-    font-size: 1.5rem;
-    font-weight: bold;
-    margin: 0.75rem 0;
+.tiptap-toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  border-right: 1px solid #e5e7eb;
+  padding-left: 0.25rem;
+  padding-right: 0.5rem;
+  margin-right: 0.25rem;
 }
 
-.editor-content h3 {
-    font-size: 1.25rem;
-    font-weight: bold;
-    margin: 0.5rem 0;
+.tiptap-toolbar-group:last-child {
+  border-right: none;
+  margin-right: 0;
 }
 
-.editor-content h4 {
-    font-size: 1.1rem;
-    font-weight: bold;
-    margin: 0.5rem 0;
+.dark .tiptap-toolbar-group {
+  border-color: #374151;
 }
 
-.editor-content h5 {
-    font-size: 1rem;
-    font-weight: bold;
-    margin: 0.5rem 0;
+.tiptap-toolbar-button {
+  display: flex;
+  height: 2rem;
+  width: 2rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+  color: #4b5563;
+  transition: all 0.2s;
+  background: transparent;
+  border: none;
+  cursor: pointer;
 }
 
-.editor-content h6 {
-    font-size: 0.875rem;
-    font-weight: bold;
-    margin: 0.5rem 0;
+.dark .tiptap-toolbar-button {
+  color: #9ca3af;
 }
 
-/* Toolbar buttons */
-.rdw-option-wrapper {
-    background-color: #ffffff;
-    border: 1px solid #e5e7eb;
-    border-radius: 0.375rem;
-    margin: 0 0.125rem;
-    transition: all 0.2s;
-    min-width: 30px;
-    height: 30px;
+.tiptap-toolbar-button:hover:not(:disabled) {
+  background-color: #e5e7eb;
+  color: #111827;
 }
 
-.dark .rdw-option-wrapper {
-    background-color: #374151;
-    border-color: #4b5563;
-    color: #ffffff;
+.dark .tiptap-toolbar-button:hover:not(:disabled) {
+  background-color: #374151;
+  color: #f9fafb;
 }
 
-.rdw-option-wrapper:hover {
-    background-color: #f3f4f6;
-    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+.tiptap-toolbar-button.is-active {
+  background-color: #dbeafe;
+  color: #2563eb;
+  font-weight: bold;
 }
 
-.dark .rdw-option-wrapper:hover {
-    background-color: #4b5563;
+.dark .tiptap-toolbar-button.is-active {
+  background-color: rgba(37, 99, 235, 0.2);
+  color: #60a5fa;
 }
 
-/* Active toolbar button */
-.rdw-option-active {
-    background-color: #3b82f6 !important;
-    color: #ffffff !important;
-    border-color: #3b82f6 !important;
+.tiptap-toolbar-button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
 }
 
-/* Dropdown */
-.rdw-dropdown-wrapper {
-    background-color: #ffffff;
-    border: 1px solid #e5e7eb;
-    border-radius: 0.375rem;
-    height: 30px;
-    margin-bottom: 0;
-    position: relative;
-    /* Anchor for dropdown options */
+/* Editor Content */
+.tiptap {
+  min-height: var(--editor-min-height, 500px);
+  padding: 1.5rem;
+  outline: none;
 }
 
-/* Specific width for font size dropdown */
-.rdw-fontsize-dropdown {
-    min-width: 50px;
-    width: 50px;
+.tiptap p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+  color: #9ca3af;
 }
 
-/* Specific width for font family dropdown */
-.rdw-fontfamily-dropdown {
-    min-width: 100px;
-    width: 120px;
+.dark .tiptap p.is-editor-empty:first-child::before {
+  color: #4b5563;
 }
 
-/* General dropdown text */
-.rdw-dropdown-selectedtext {
-    font-size: 13px;
-    color: #374151;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
-    padding: 0 8px;
-    /* Add padding for spacing */
+/* Tables */
+.tiptap table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%;
+  margin: 1.5rem 0;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
 }
 
-/* Fix caret position in RTL */
-.rdw-dropdown-carettoopen {
-    margin-left: auto;
-    /* Push to the right/left end depending on flex */
-    margin-right: 0;
-    border-top-color: #6b7280;
-    /* Make simpler grey */
+.dark .tiptap table {
+  border-color: #374151;
 }
 
-/* In RTL, the caret might need specific adjustments if the library doesn't handle it well */
-[dir="rtl"] .rdw-dropdown-carettoopen {
-    margin-right: auto;
-    margin-left: 0;
-    left: 10px;
-    right: auto;
+.tiptap table td,
+.tiptap table th {
+  min-width: 1em;
+  border: 1px solid #e5e7eb;
+  padding: 0.75rem;
+  position: relative;
+  vertical-align: top;
+  box-sizing: border-box;
 }
 
-/* Ensure the wrapper handles flex correctly */
-.rdw-dropdown-wrapper {
-    display: flex;
-    align-items: center;
+.dark .tiptap table td,
+.dark .tiptap table th {
+  border-color: #374151;
 }
 
-.dark .rdw-dropdown-wrapper {
-    background-color: #374151;
-    border-color: #4b5563;
-    color: #ffffff;
+.tiptap table th {
+  background-color: #f3f4f6;
+  font-weight: bold;
+  text-align: left;
 }
 
-.dark .rdw-dropdown-selectedtext {
-    color: #ffffff;
+.dark .tiptap table th {
+  background-color: rgba(55, 65, 81, 0.5);
 }
 
-.rdw-dropdown-optionwrapper {
-    background-color: #ffffff;
-    border: 1px solid #e5e7eb;
-    border-radius: 0.375rem;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    overflow-y: auto;
-    max-height: 250px;
-    width: max-content;
-    min-width: 100%;
-    z-index: 1001;
-    position: absolute;
-    top: 100%;
-    left: 0;
+.tiptap table .selectedCell:after {
+  z-index: 2;
+  position: absolute;
+  content: "";
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  background: rgba(200, 200, 255, 0.2);
+  pointer-events: none;
 }
 
-.dark .rdw-dropdown-optionwrapper {
-    background-color: #374151;
-    border-color: #4b5563;
+.tiptap table .column-resize-handle {
+  position: absolute;
+  right: -2px;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background-color: #60a5fa;
+  pointer-events: none;
 }
 
-.rdw-dropdownoption-default {
-    color: #1f2937;
-    padding: 0.5rem;
+/* Task lists */
+.tiptap ul[data-type="taskList"] {
+  list-style: none;
+  padding: 0;
 }
 
-.dark .rdw-dropdownoption-default {
-    color: #ffffff;
+.tiptap ul[data-type="taskList"] li {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 0.5rem;
 }
 
-.rdw-dropdownoption-highlighted {
-    background-color: #f3f4f6;
+.tiptap ul[data-type="taskList"] label {
+  flex: 0 0 auto;
+  margin-right: 0.75rem;
+  user-select: none;
 }
 
-.dark .rdw-dropdownoption-highlighted {
-    background-color: #4b5563;
+.tiptap ul[data-type="taskList"] div {
+  flex: 1 1 auto;
 }
 
-.rdw-dropdownoption-active {
-    background-color: #3b82f6;
-    color: #ffffff;
+/* General Prose adjustments */
+.tiptap h1 {
+  font-size: 2.25rem;
+  font-weight: 800;
+  margin-bottom: 1rem;
+}
+.tiptap h2 {
+  font-size: 1.875rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+}
+.tiptap h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+.tiptap p {
+  margin-bottom: 1rem;
+  line-height: 1.6;
+}
+.tiptap blockquote {
+  border-left: 4px solid #e5e7eb;
+  padding-left: 1rem;
+  font-style: italic;
+  color: #4b5563;
+}
+.dark .tiptap blockquote {
+  border-left-color: #374151;
+  color: #9ca3af;
+}
+.tiptap code {
+  background-color: #f3f4f6;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-family: monospace;
+}
+.dark .tiptap code {
+  background-color: #1f2937;
+}
+.tiptap pre {
+  background-color: #1f2937;
+  color: #f9fafb;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  overflow-x: auto;
 }
 
-/* Link modal */
-.editor-content a {
-    color: #2563eb;
-    text-decoration: underline;
-    cursor: pointer;
+/* RTL */
+.tiptap[dir="rtl"] {
+  text-align: right;
 }
 
-.rdw-link-modal {
-    background-color: #ffffff;
-    border: 1px solid #e5e7eb;
-    border-radius: 0.5rem;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-    padding: 1rem;
-    min-height: max-content;
-    width: 250px;
-    z-index: 1000;
-    position: absolute;
-    top: 35px;
-    /* Offset from toolbar */
-    left: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+.tiptap[dir="rtl"] table th {
+  text-align: right;
 }
 
-.dark .rdw-link-modal {
-    background-color: #1f2937;
-    border-color: #374151;
-    color: #f9fafb;
+.tiptap[dir="rtl"] p.is-editor-empty:first-child::before {
+  float: right;
 }
 
-.rdw-link-modal-input {
-    border: 1px solid #d1d5db;
-    border-radius: 0.375rem;
-    padding: 0.5rem;
-    width: 100%;
-    margin-bottom: 0.5rem;
-    font-size: 0.875rem;
+/* Wide / resized tables scroll instead of breaking the layout */
+.tiptap .tableWrapper {
+  overflow-x: auto;
+  margin: 1.5rem 0;
 }
 
-.dark .rdw-link-modal-input {
-    background-color: #374151;
-    border-color: #4b5563;
-    color: #ffffff;
+.tiptap .tableWrapper table {
+  margin: 0;
 }
 
-.rdw-link-modal label {
-    font-size: 0.75rem;
-    font-weight: 500;
-    margin-bottom: 0.25rem;
-    display: block;
-    color: #4b5563;
+.tiptap.resize-cursor {
+  cursor: col-resize;
 }
 
-.dark .rdw-link-modal label {
-    color: #d1d5db;
+/* Tables in preview mode (content rendered with dangerouslySetInnerHTML) */
+.prose table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1.5rem 0;
 }
 
-.rdw-link-modal-btn {
-    background-color: #3b82f6;
-    border: none;
-    border-radius: 0.375rem;
-    color: #ffffff;
-    padding: 0.5rem 1rem;
-    cursor: pointer;
-    transition: all 0.2s;
-    margin-right: 0.5rem;
-    height: max-content;
+.prose table td,
+.prose table th {
+  border: 1px solid #e5e7eb;
+  padding: 0.75rem;
+  vertical-align: top;
+  text-align: start;
 }
 
-.rdw-link-modal-btn:hover {
-    background-color: #2563eb;
+.prose table th {
+  background-color: #f3f4f6;
+  font-weight: bold;
 }
 
-.rdw-link-modal-btn:disabled {
-    background-color: #9ca3af;
-    cursor: not-allowed;
+.dark .prose table td,
+.dark .prose table th {
+  border-color: #374151;
 }
 
-/* Emoji picker */
-.rdw-emoji-modal {
-    background-color: #ffffff;
-    border: 1px solid #e5e7eb;
-    border-radius: 0.5rem;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-    z-index: 1000;
-    position: absolute;
-}
-
-.dark .rdw-emoji-modal {
-    background-color: #1f2937;
-    border-color: #4b5563;
-}
-
-/* Color picker */
-.rdw-colorpicker-modal {
-    background-color: #ffffff;
-    border: 1px solid #e5e7eb;
-    border-radius: 0.5rem;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    z-index: 1000;
-    position: absolute;
-}
-
-.dark .rdw-colorpicker-modal {
-    background-color: #374151;
-    border-color: #4b5563;
-}
-
-.rdw-colorpicker-option {
-    border: 1px solid #e5e7eb;
-    border-radius: 0.25rem;
-}
-
-/* Image upload */
-.rdw-image-modal {
-    background-color: #ffffff;
-    border: 1px solid #e5e7eb;
-    border-radius: 0.5rem;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-    padding: 1rem;
-    z-index: 1000;
-    position: absolute;
-}
-
-.dark .rdw-image-modal {
-    background-color: #1f2937;
-    border-color: #4b5563;
-}
-
-.rdw-image-modal-btn {
-    background-color: #3b82f6;
-    border: none;
-    border-radius: 0.375rem;
-    color: #ffffff;
-    padding: 0.5rem 1rem;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.rdw-image-modal-btn:hover {
-    background-color: #2563eb;
-}
-
-/* Placeholder */
-.public-DraftEditorPlaceholder-root {
-    color: #9ca3af;
-    padding: 0;
-}
-
-.dark .public-DraftEditorPlaceholder-root {
-    color: #6b7280;
-}
-
-/* Editor focus */
-.public-DraftEditor-content {
-    min-height: calc(var(--editor-min-height) - 50px);
-}
-
-/* Embedded modal */
-.rdw-embedded-modal {
-    background-color: #ffffff;
-    border: 1px solid #e5e7eb;
-    border-radius: 0.5rem;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-    padding: 1rem;
-    z-index: 1000;
-    position: absolute;
-}
-
-.dark .rdw-embedded-modal {
-    background-color: #1f2937;
-    border-color: #4b5563;
-}
-
-.rdw-embedded-modal-btn {
-    background-color: #3b82f6;
-    border: none;
-    border-radius: 0.375rem;
-    color: #ffffff;
-    padding: 0.5rem 1rem;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.rdw-embedded-modal-btn:hover {
-    background-color: #2563eb;
+.dark .prose table th {
+  background-color: rgba(55, 65, 81, 0.5);
 }

@@ -23,6 +23,7 @@ import OperationDetails from "./pages/OperationDetails";
 import AppLayout from "./layout/AppLayout";
 import { ScrollToTop } from "./components/common/ScrollToTop";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
+import GuestRoute from "./components/auth/GuestRoute";
 
 export default function App() {
   return (
@@ -70,7 +71,14 @@ export default function App() {
           </Route>
 
           {/* Auth Layout */}
-          <Route path="/signin" element={<SignIn />} />
+          <Route
+            path="/signin"
+            element={
+              <GuestRoute>
+                <SignIn />
+              </GuestRoute>
+            }
+          />
           <Route path="/signup" element={<SignUp />} />
 
           {/* Fallback Route */}

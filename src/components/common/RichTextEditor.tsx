@@ -1,14 +1,103 @@
-import { Component } from 'react';
-import { Editor } from 'react-draft-wysiwyg';
-import { EditorState, convertToRaw, convertFromRaw, ContentState, convertFromHTML } from 'draft-js';
-import draftToHtml from 'draftjs-to-html';
-import 'react-draft-wysiwyg/dist/react-draft-wysiwyg.css';
-import './RichTextEditor.css';
+import React, {
+  useCallback,
+  useImperativeHandle,
+  forwardRef,
+  useState,
+} from "react";
+import { useEditor, EditorContent, type Editor } from "@tiptap/react";
+import { BubbleMenu } from "@tiptap/react/menus";
+import { StarterKit } from "@tiptap/starter-kit";
+import { Underline } from "@tiptap/extension-underline";
+import { Link } from "@tiptap/extension-link";
+import { Image } from "@tiptap/extension-image";
+import { TextAlign } from "@tiptap/extension-text-align";
+import { Table } from "@tiptap/extension-table";
+import { TableRow } from "@tiptap/extension-table-row";
+import { TableCell } from "@tiptap/extension-table-cell";
+import { TableHeader } from "@tiptap/extension-table-header";
+import { Placeholder } from "@tiptap/extension-placeholder";
+import { TextStyle } from "@tiptap/extension-text-style";
+import { Color } from "@tiptap/extension-color";
+import { Typography } from "@tiptap/extension-typography";
+import { TaskList } from "@tiptap/extension-task-list";
+import { TaskItem } from "@tiptap/extension-task-item";
+import { Highlight } from "@tiptap/extension-highlight";
+import { Subscript } from "@tiptap/extension-subscript";
+import { Superscript } from "@tiptap/extension-superscript";
+import { FontFamily } from "@tiptap/extension-font-family";
+import { CharacterCount } from "@tiptap/extension-character-count";
+
+import {
+  Bold,
+  Italic,
+  Underline as UnderlineIcon,
+  Strikethrough,
+  Heading1,
+  Heading2,
+  Heading3,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  AlignJustify,
+  List,
+  ListOrdered,
+  CheckSquare,
+  Quote,
+  Code,
+  Link as LinkIcon,
+  Image as ImageIcon,
+  Table as TableIcon,
+  Trash2,
+  Undo2,
+  Redo2,
+  Baseline,
+  Highlighter,
+  Subscript as SubscriptIcon,
+  Superscript as SuperscriptIcon,
+  X,
+  Columns,
+  Rows,
+  TableCellsMerge,
+  Split,
+  Type,
+} from "lucide-react";
+
+import "./RichTextEditor.css";
+
+// Keep these outside the component: BubbleMenu re-dispatches its options whenever
+// `shouldShow` changes identity, so inline arrows would cause an update loop.
+const shouldShowTextMenu = ({ editor, from, to }: { editor: Editor; from: number; to: number }) =>
+  from !== to && !editor.isActive("table");
+const shouldShowTableMenu = ({ editor }: { editor: Editor }) => editor.isActive("table");
+
+const useSharedActions = (editor: any) => {
+  const addImage = useCallback(() => {
+    const url = window.prompt("Enter Image URL");
+    if (url) {
+      editor.chain().focus().setImage({ src: url }).run();
+    }
+  }, [editor]);
+
+  const setLink = useCallback(() => {
+    const previousUrl = editor.getAttributes("link").href;
+    const url = window.prompt("Enter Link URL", previousUrl);
+
+    if (url === null) return;
+    if (url === "") {
+      editor.chain().focus().extendMarkRange("link").unsetLink().run();
+      return;
+    }
+
+    editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
+  }, [editor]);
+
+  return { addImage, setLink };
+};
 
 interface RichTextEditorProps {
-  initialContent?: string; // JSON string of raw content
-  initialHtml?: string;    // HTML string
-  onContentChange?: (content: string) => void; // Callback with JSON string
+  initialContent?: string;
+  initialHtml?: string;
+  onContentChange?: (content: string) => void;
   placeholder?: string;
   minHeight?: string;
   showPreviewToggle?: boolean;
@@ -17,343 +106,591 @@ interface RichTextEditorProps {
   onSave?: (content: string) => void;
   autoSave?: boolean;
   localStorageKey?: string;
-  direction?: 'ltr' | 'rtl';
+  direction?: "ltr" | "rtl";
 }
 
-interface RichTextEditorState {
-  editorState: EditorState;
-  showPreview: boolean;
-}
+const MenuBar = ({ editor }: { editor: any }) => {
+  const { addImage, setLink } = useSharedActions(editor);
 
-export default class RichTextEditor extends Component<RichTextEditorProps, RichTextEditorState> {
-  static defaultProps = {
-    placeholder: 'Start typing your content here...',
-    minHeight: '500px',
-    showPreviewToggle: true,
-    showSaveButton: true,
-    showClearButton: true,
-    autoSave: false,
-    direction: 'ltr',
-  };
-
-  constructor(props: RichTextEditorProps) {
-    super(props);
-
-    let initialEditorState = EditorState.createEmpty();
-
-    // Load from localStorage if key is provided
-    if (props.localStorageKey) {
-      const savedContent = localStorage.getItem(props.localStorageKey);
-      if (savedContent) {
-        try {
-          const rawContent = JSON.parse(savedContent);
-          const contentState = convertFromRaw(rawContent);
-          initialEditorState = EditorState.createWithContent(contentState);
-        } catch (e) {
-          console.error('Error loading saved content:', e);
-        }
-      }
-    }
-
-    // Load from initialHtml prop if provided
-    if (props.initialHtml && !props.initialContent && !props.localStorageKey) {
-      try {
-        const blocksFromHTML = convertFromHTML(props.initialHtml);
-        const state = ContentState.createFromBlockArray(
-          blocksFromHTML.contentBlocks,
-          blocksFromHTML.entityMap
-        );
-        initialEditorState = EditorState.createWithContent(state);
-      } catch (e) {
-        console.error('Error loading initial HTML:', e);
-      }
-    }
-
-    // Load from initialContent prop if provided
-    if (props.initialContent && !props.localStorageKey) {
-      try {
-        const rawContent = JSON.parse(props.initialContent);
-        const contentState = convertFromRaw(rawContent);
-        initialEditorState = EditorState.createWithContent(contentState);
-      } catch (e) {
-        console.error('Error loading initial content:', e);
-      }
-    }
-
-    this.state = {
-      editorState: initialEditorState,
-      showPreview: false,
-    };
+  if (!editor) {
+    return null;
   }
 
-  onEditorStateChange = (editorState: EditorState) => {
-    this.setState({ editorState }, () => {
-      // Call onChange callback if provided
-      if (this.props.onContentChange) {
-        const content = this.getJsonContent();
-        this.props.onContentChange(content);
+  return (
+    <div className="tiptap-toolbar flex flex-wrap items-center gap-1 p-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 sticky top-0 z-10">
+      <div className="tiptap-toolbar-group flex items-center gap-1 pr-2 mr-1 border-r border-gray-200 dark:border-gray-700">
+        <button type="button"
+          onClick={() => editor.chain().focus().toggleBold().run()}
+          disabled={!editor.can().chain().focus().toggleBold().run()}
+          className={`tiptap-toolbar-button flex items-center justify-center w-8 h-8 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors ${editor.isActive("bold") ? "is-active bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400" : "text-gray-600 dark:text-gray-400"}`}
+          title="Bold (Ctrl+B)"
+        >
+          <Bold size={16} />
+        </button>
+        <button type="button"
+          onClick={() => editor.chain().focus().toggleItalic().run()}
+          disabled={!editor.can().chain().focus().toggleItalic().run()}
+          className={`tiptap-toolbar-button flex items-center justify-center w-8 h-8 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors ${editor.isActive("italic") ? "is-active bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400" : "text-gray-600 dark:text-gray-400"}`}
+          title="Italic (Ctrl+I)"
+        >
+          <Italic size={16} />
+        </button>
+        <button type="button"
+          onClick={() => editor.chain().focus().toggleUnderline().run()}
+          className={`tiptap-toolbar-button flex items-center justify-center w-8 h-8 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors ${editor.isActive("underline") ? "is-active bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400" : "text-gray-600 dark:text-gray-400"}`}
+          title="Underline (Ctrl+U)"
+        >
+          <UnderlineIcon size={16} />
+        </button>
+        <button type="button"
+          onClick={() => editor.chain().focus().toggleStrike().run()}
+          disabled={!editor.can().chain().focus().toggleStrike().run()}
+          className={`tiptap-toolbar-button flex items-center justify-center w-8 h-8 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors ${editor.isActive("strike") ? "is-active bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400" : "text-gray-600 dark:text-gray-400"}`}
+          title="Strike"
+        >
+          <Strikethrough size={16} />
+        </button>
+        <button type="button"
+          onClick={() => editor.chain().focus().toggleHighlight().run()}
+          className={`tiptap-toolbar-button flex items-center justify-center w-8 h-8 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors ${editor.isActive("highlight") ? "is-active bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400" : "text-gray-600 dark:text-gray-400"}`}
+          title="Highlight"
+        >
+          <Highlighter size={16} />
+        </button>
+      </div>
+
+      <div className="tiptap-toolbar-group flex items-center gap-1 pr-2 mr-1 border-r border-gray-200 dark:border-gray-700">
+        <button type="button"
+          onClick={() => editor.chain().focus().toggleSubscript().run()}
+          className={`tiptap-toolbar-button flex items-center justify-center w-8 h-8 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors ${editor.isActive("subscript") ? "is-active bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400" : "text-gray-600 dark:text-gray-400"}`}
+          title="Subscript"
+        >
+          <SubscriptIcon size={16} />
+        </button>
+        <button type="button"
+          onClick={() => editor.chain().focus().toggleSuperscript().run()}
+          className={`tiptap-toolbar-button flex items-center justify-center w-8 h-8 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors ${editor.isActive("superscript") ? "is-active bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400" : "text-gray-600 dark:text-gray-400"}`}
+          title="Superscript"
+        >
+          <SuperscriptIcon size={16} />
+        </button>
+      </div>
+
+      <div className="tiptap-toolbar-group flex items-center gap-1 pr-2 mr-1 border-r border-gray-200 dark:border-gray-700">
+        <button type="button"
+          onClick={() =>
+            editor.chain().focus().toggleHeading({ level: 1 }).run()
+          }
+          className={`tiptap-toolbar-button flex items-center justify-center w-8 h-8 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors ${editor.isActive("heading", { level: 1 }) ? "is-active bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400" : "text-gray-600 dark:text-gray-400"}`}
+          title="Heading 1"
+        >
+          <Heading1 size={16} />
+        </button>
+        <button type="button"
+          onClick={() =>
+            editor.chain().focus().toggleHeading({ level: 2 }).run()
+          }
+          className={`tiptap-toolbar-button flex items-center justify-center w-8 h-8 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors ${editor.isActive("heading", { level: 2 }) ? "is-active bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400" : "text-gray-600 dark:text-gray-400"}`}
+          title="Heading 2"
+        >
+          <Heading2 size={16} />
+        </button>
+        <button type="button"
+          onClick={() =>
+            editor.chain().focus().toggleHeading({ level: 3 }).run()
+          }
+          className={`tiptap-toolbar-button flex items-center justify-center w-8 h-8 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors ${editor.isActive("heading", { level: 3 }) ? "is-active bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400" : "text-gray-600 dark:text-gray-400"}`}
+          title="Heading 3"
+        >
+          <Heading3 size={16} />
+        </button>
+      </div>
+
+      <div className="tiptap-toolbar-group flex items-center gap-1 pr-2 mr-1 border-r border-gray-200 dark:border-gray-700">
+        <button type="button"
+          onClick={() => editor.chain().focus().setTextAlign("left").run()}
+          className={`tiptap-toolbar-button flex items-center justify-center w-8 h-8 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors ${editor.isActive({ textAlign: "left" }) ? "is-active bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400" : "text-gray-600 dark:text-gray-400"}`}
+          title="Align Left"
+        >
+          <AlignLeft size={16} />
+        </button>
+        <button type="button"
+          onClick={() => editor.chain().focus().setTextAlign("center").run()}
+          className={`tiptap-toolbar-button flex items-center justify-center w-8 h-8 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors ${editor.isActive({ textAlign: "center" }) ? "is-active bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400" : "text-gray-600 dark:text-gray-400"}`}
+          title="Align Center"
+        >
+          <AlignCenter size={16} />
+        </button>
+        <button type="button"
+          onClick={() => editor.chain().focus().setTextAlign("right").run()}
+          className={`tiptap-toolbar-button flex items-center justify-center w-8 h-8 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors ${editor.isActive({ textAlign: "right" }) ? "is-active bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400" : "text-gray-600 dark:text-gray-400"}`}
+          title="Align Right"
+        >
+          <AlignRight size={16} />
+        </button>
+        <button type="button"
+          onClick={() => editor.chain().focus().setTextAlign("justify").run()}
+          className={`tiptap-toolbar-button flex items-center justify-center w-8 h-8 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors ${editor.isActive({ textAlign: "justify" }) ? "is-active bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400" : "text-gray-600 dark:text-gray-400"}`}
+          title="Justify"
+        >
+          <AlignJustify size={16} />
+        </button>
+      </div>
+
+      <div className="tiptap-toolbar-group flex items-center gap-1 pr-2 mr-1 border-r border-gray-200 dark:border-gray-700">
+        <button type="button"
+          onClick={() => editor.chain().focus().toggleBulletList().run()}
+          className={`tiptap-toolbar-button flex items-center justify-center w-8 h-8 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors ${editor.isActive("bulletList") ? "is-active bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400" : "text-gray-600 dark:text-gray-400"}`}
+          title="Bullet List"
+        >
+          <List size={16} />
+        </button>
+        <button type="button"
+          onClick={() => editor.chain().focus().toggleOrderedList().run()}
+          className={`tiptap-toolbar-button flex items-center justify-center w-8 h-8 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors ${editor.isActive("orderedList") ? "is-active bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400" : "text-gray-600 dark:text-gray-400"}`}
+          title="Ordered List"
+        >
+          <ListOrdered size={16} />
+        </button>
+        <button type="button"
+          onClick={() => editor.chain().focus().toggleTaskList().run()}
+          className={`tiptap-toolbar-button flex items-center justify-center w-8 h-8 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors ${editor.isActive("taskList") ? "is-active bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400" : "text-gray-600 dark:text-gray-400"}`}
+          title="Task List"
+        >
+          <CheckSquare size={16} />
+        </button>
+      </div>
+
+      <div className="tiptap-toolbar-group flex items-center gap-1 pr-2 mr-1 border-r border-gray-200 dark:border-gray-700">
+        <button type="button"
+          onClick={() => editor.chain().focus().toggleBlockquote().run()}
+          className={`tiptap-toolbar-button flex items-center justify-center w-8 h-8 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors ${editor.isActive("blockquote") ? "is-active bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400" : "text-gray-600 dark:text-gray-400"}`}
+          title="Blockquote"
+        >
+          <Quote size={16} />
+        </button>
+        <button type="button"
+          onClick={() => editor.chain().focus().toggleCodeBlock().run()}
+          className={`tiptap-toolbar-button flex items-center justify-center w-8 h-8 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors ${editor.isActive("codeBlock") ? "is-active bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400" : "text-gray-600 dark:text-gray-400"}`}
+          title="Code Block"
+        >
+          <Code size={16} />
+        </button>
+      </div>
+
+      <div className="tiptap-toolbar-group flex items-center gap-1 pr-2 mr-1 border-r border-gray-200 dark:border-gray-700">
+        <button type="button"
+          onClick={setLink}
+          className={`tiptap-toolbar-button flex items-center justify-center w-8 h-8 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors ${editor.isActive("link") ? "is-active bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400" : "text-gray-600 dark:text-gray-400"}`}
+          title="Link"
+        >
+          <LinkIcon size={16} />
+        </button>
+        <button type="button"
+          onClick={addImage}
+          className="tiptap-toolbar-button flex items-center justify-center w-8 h-8 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-gray-600 dark:text-gray-400"
+          title="Image"
+        >
+          <ImageIcon size={16} />
+        </button>
+      </div>
+
+      {/* Table Controls */}
+      <div className="tiptap-toolbar-group flex items-center gap-1 pr-2 mr-1 border-r border-gray-200 dark:border-gray-700">
+        <button type="button"
+          onClick={() =>
+            editor
+              .chain()
+              .focus()
+              .insertTable({ rows: 3, cols: 3, withHeaderRow: true })
+              .run()
+          }
+          className="tiptap-toolbar-button flex items-center justify-center w-8 h-8 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-gray-600 dark:text-gray-400"
+          title="Insert Table"
+        >
+          <TableIcon size={16} />
+        </button>
+        {editor.isActive("table") && (
+          <>
+            <button type="button"
+              onClick={() => editor.chain().focus().addColumnAfter().run()}
+              className="tiptap-toolbar-button flex items-center justify-center w-8 h-8 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-blue-600 dark:text-blue-400"
+              title="Add Column"
+            >
+              <Columns size={16} />
+            </button>
+            <button type="button"
+              onClick={() => editor.chain().focus().addRowAfter().run()}
+              className="tiptap-toolbar-button flex items-center justify-center w-8 h-8 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-blue-600 dark:text-blue-400"
+              title="Add Row"
+            >
+              <Rows size={16} />
+            </button>
+            <button type="button"
+              onClick={() => editor.chain().focus().deleteTable().run()}
+              className="tiptap-toolbar-button flex items-center justify-center w-8 h-8 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-red-500"
+              title="Delete Table"
+            >
+              <X size={16} />
+            </button>
+          </>
+        )}
+      </div>
+
+      <div className="tiptap-toolbar-group flex items-center gap-1">
+        <button type="button"
+          onClick={() => editor.chain().focus().undo().run()}
+          disabled={!editor.can().chain().focus().undo().run()}
+          className="tiptap-toolbar-button flex items-center justify-center w-8 h-8 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-gray-600 dark:text-gray-400 disabled:opacity-30"
+          title="Undo"
+        >
+          <Undo2 size={16} />
+        </button>
+        <button type="button"
+          onClick={() => editor.chain().focus().redo().run()}
+          disabled={!editor.can().chain().focus().redo().run()}
+          className="tiptap-toolbar-button flex items-center justify-center w-8 h-8 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-gray-600 dark:text-gray-400 disabled:opacity-30"
+          title="Redo"
+        >
+          <Redo2 size={16} />
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const RichTextEditor = forwardRef<any, RichTextEditorProps>((props, ref) => {
+  const {
+    initialHtml,
+    onContentChange,
+    placeholder = "Start typing your content here...",
+    minHeight = "500px",
+    showPreviewToggle = true,
+    showSaveButton = true,
+    showClearButton = true,
+    onSave,
+    autoSave = false,
+    localStorageKey,
+    direction = "ltr",
+  } = props;
+
+  const [showPreview, setShowPreview] = useState(false);
+
+  const getInitialContent = useCallback(() => {
+    if (localStorageKey) {
+      const saved = localStorage.getItem(localStorageKey);
+      if (saved) {
+        if (!saved.trim().startsWith("{")) {
+          return saved;
+        }
+        try {
+          const parsed = JSON.parse(saved);
+          if (parsed.content || parsed.type === "doc") {
+            return parsed;
+          }
+        } catch (e) {
+          return saved;
+        }
       }
-
-      // Auto-save to localStorage if enabled
-      if (this.props.autoSave && this.props.localStorageKey) {
-        const content = this.getJsonContent();
-        localStorage.setItem(this.props.localStorageKey, content);
-      }
-    });
-  };
-
-  getJsonContent = (): string => {
-    const contentState = this.state.editorState.getCurrentContent();
-    const rawContent = convertToRaw(contentState);
-    return JSON.stringify(rawContent);
-  };
-
-  getHtmlContent = (): string => {
-    const contentState = this.state.editorState.getCurrentContent();
-    const rawContent = convertToRaw(contentState);
-    return draftToHtml(rawContent);
-  };
-
-  handleSave = () => {
-    const content = this.getJsonContent();
-
-    if (this.props.localStorageKey) {
-      localStorage.setItem(this.props.localStorageKey, content);
     }
+    return initialHtml || "";
+  }, [localStorageKey, initialHtml]);
 
-    if (this.props.onSave) {
-      this.props.onSave(content);
+  const editor = useEditor({
+    shouldRerenderOnTransaction: true,
+    extensions: [
+      StarterKit.configure({
+        link: false,
+        underline: false,
+      }),
+      Underline,
+      Link.configure({
+        openOnClick: false,
+        HTMLAttributes: {
+          class: "cursor-pointer text-blue-600 underline",
+        },
+      }),
+      Image,
+      TextAlign.configure({
+        types: ["heading", "paragraph"],
+      }),
+      Table.configure({
+        resizable: true,
+      }),
+      TableRow,
+      TableHeader,
+      TableCell,
+      Placeholder.configure({
+        placeholder: placeholder,
+      }),
+      TextStyle,
+      Color,
+      Typography,
+      TaskList,
+      TaskItem.configure({
+        nested: true,
+      }),
+      Highlight.configure({ multicolor: true }),
+      Subscript,
+      Superscript,
+      FontFamily,
+      CharacterCount,
+    ],
+    content: getInitialContent(),
+    editorProps: {
+      attributes: {
+        class: "tiptap focus:outline-none min-h-[var(--editor-min-height)] p-4",
+        dir: direction,
+      },
+      // Clean up pasted HTML to prevent unwanted bolding from some sources (like MS Word/Google Docs)
+      transformPastedHTML(html) {
+        return (
+          html
+            .replace(/font-weight:\s*bold/g, "")
+            .replace(/font-weight:\s*700/g, "")
+            .replace(/font-weight:\s*800/g, "")
+            .replace(/font-weight:\s*900/g, "")
+            // Remove <strong> tags that wrap the entire content of a list item or paragraph when pasting from Google Docs
+            .replace(/<li>\s*<strong>(.*?)<\/strong>\s*<\/li>/g, "<li>$1</li>")
+            .replace(/<li>\s*<b>(.*?)<\/b>\s*<\/li>/g, "<li>$1</li>")
+        );
+      },
+    },
+    onUpdate: ({ editor }) => {
+      const html = editor.getHTML();
+      if (onContentChange) {
+        onContentChange(html);
+      }
+      if (autoSave && localStorageKey) {
+        localStorage.setItem(localStorageKey, html);
+      }
+    },
+  });
+
+  useImperativeHandle(ref, () => ({
+    getContent: () => ({
+      json: JSON.stringify(editor?.getJSON()),
+      html: editor?.getHTML() || "",
+    }),
+    setContent: (content: string) => {
+      if (editor) {
+        try {
+          const json = JSON.parse(content);
+          editor.commands.setContent(json);
+        } catch (e) {
+          editor.commands.setContent(content);
+        }
+      }
+    },
+    setHtmlContent: (html: string) => {
+      editor?.commands.setContent(html);
+    },
+  }));
+
+  const handleSave = () => {
+    if (!editor) return;
+    const html = editor.getHTML();
+    if (localStorageKey) {
+      localStorage.setItem(localStorageKey, html);
+    }
+    if (onSave) {
+      onSave(html);
     } else {
-      alert('Content saved successfully!');
+      alert("Content saved successfully!");
     }
   };
 
-  handleClear = () => {
-    if (window.confirm('Are you sure you want to clear all content?')) {
-      this.setState({ editorState: EditorState.createEmpty() }, () => {
-        if (this.props.localStorageKey) {
-          localStorage.removeItem(this.props.localStorageKey);
-        }
-        if (this.props.onContentChange) {
-          this.props.onContentChange('');
-        }
-      });
+  const handleClear = () => {
+    if (window.confirm("Are you sure you want to clear all content?")) {
+      editor?.commands.clearContent();
+      if (localStorageKey) {
+        localStorage.removeItem(localStorageKey);
+      }
+      if (onContentChange) {
+        onContentChange("");
+      }
     }
   };
 
-  togglePreview = () => {
-    this.setState({ showPreview: !this.state.showPreview });
+  const togglePreview = () => {
+    setShowPreview(!showPreview);
   };
 
-  // Public method to get content
-  getContent = (): { json: string; html: string } => {
-    return {
-      json: this.getJsonContent(),
-      html: this.getHtmlContent(),
-    };
-  };
+  const { setLink } = useSharedActions(editor);
 
-  // Public method to set content from JSON
-  setContent = (jsonContent: string) => {
-    if (!jsonContent) {
-      this.setState({ editorState: EditorState.createEmpty() });
-      return;
-    }
-    try {
-      const rawContent = JSON.parse(jsonContent);
-      const contentState = convertFromRaw(rawContent);
-      const editorState = EditorState.createWithContent(contentState);
-      this.setState({ editorState });
-    } catch (e) {
-      console.error('Error setting content:', e);
-    }
-  };
-
-  // Public method to set content from HTML
-  setHtmlContent = (htmlContent: string) => {
-    if (!htmlContent) {
-      this.setState({ editorState: EditorState.createEmpty() });
-      return;
-    }
-    try {
-      const blocksFromHTML = convertFromHTML(htmlContent);
-      const state = ContentState.createFromBlockArray(
-        blocksFromHTML.contentBlocks,
-        blocksFromHTML.entityMap
-      );
-      const editorState = EditorState.createWithContent(state);
-      this.setState({ editorState });
-    } catch (e) {
-      console.error('Error setting HTML content:', e);
-    }
-  };
-
-  render() {
-    const { editorState, showPreview } = this.state;
-    const {
-      placeholder,
-      minHeight,
-      showPreviewToggle,
-      showSaveButton,
-      showClearButton,
-      direction,
-    } = this.props;
-
+  if (!editor) {
     return (
-      <div
-        className="rich-text-editor-wrapper"
-        style={{ '--editor-min-height': minHeight } as React.CSSProperties}
-      >
-        {/* Header with action buttons */}
-        {(showPreviewToggle || showClearButton || showSaveButton) && (
-          <div className="mb-4 flex items-center justify-between" dir={direction}>
-            <h3 className="text-lg font-semibold text-gray-800 dark:text-white">
-              {showPreview ? 'Preview Mode' : 'Editor Mode'}
-            </h3>
-            <div className="flex gap-3">
-              {showPreviewToggle && (
-                <button
-                  onClick={this.togglePreview}
-                  className="rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
-                >
-                  {showPreview ? 'Edit' : 'Preview'}
-                </button>
-              )}
-              {showClearButton && (
-                <button
-                  onClick={this.handleClear}
-                  className="rounded-lg bg-gray-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
-                >
-                  Clear
-                </button>
-              )}
-              {showSaveButton && (
-                <button
-                  onClick={this.handleSave}
-                  className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                >
-                  Save
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Editor or Preview */}
-        {!showPreview ? (
-          <div className="rounded-lg border border-gray-300 bg-white overflow-visible dark:border-gray-700 dark:bg-gray-900">
-            <Editor
-              editorState={editorState}
-              onEditorStateChange={this.onEditorStateChange}
-              wrapperClassName="editor-wrapper"
-              editorClassName={`editor-content px-4 py-3 text-gray-800 dark:text-white`}
-              editorStyle={{ direction: direction, textAlign: direction === 'rtl' ? 'right' : 'left' }}
-              toolbarClassName="editor-toolbar border-b border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800"
-              placeholder={placeholder}
-              stripPastedStyles={false}
-              textAlignment={direction === 'rtl' ? 'right' : 'left'}
-              toolbar={{
-                options: [
-                  'inline',
-                  'blockType',
-                  'fontSize',
-                  'fontFamily',
-                  'list',
-                  'textAlign',
-                  'colorPicker',
-                  'link',
-                  'embedded',
-                  'emoji',
-                  'image',
-                  'remove',
-                  'history',
-                ],
-                inline: {
-                  inDropdown: false,
-                  options: [
-                    'bold',
-                    'italic',
-                    'underline',
-                    'strikethrough',
-                    'monospace',
-                    'superscript',
-                    'subscript',
-                  ],
-                },
-                blockType: {
-                  inDropdown: true,
-                  options: [
-                    'Normal',
-                    'H1',
-                    'H2',
-                    'H3',
-                    'H4',
-                    'H5',
-                    'H6',
-                    'Blockquote',
-                    'Code',
-                  ],
-                },
-                fontSize: {
-                  options: [8, 9, 10, 11, 12, 14, 16, 18, 24, 30, 36, 48, 60, 72, 96],
-                },
-                fontFamily: {
-                  options: [
-                    'Arial',
-                    'Georgia',
-                    'Impact',
-                    'Tahoma',
-                    'Times New Roman',
-                    'Verdana',
-                    'Roboto',
-                    'Open Sans',
-                    'Inter',
-                    'Nunito',
-                  ],
-                },
-                list: {
-                  inDropdown: false,
-                  options: ['unordered', 'ordered', 'indent', 'outdent'],
-                },
-                textAlign: {
-                  inDropdown: false,
-                  options: ['left', 'center', 'right', 'justify'],
-                },
-                link: {
-                  inDropdown: false,
-                  showOpenOptionOnHover: true,
-                  defaultTargetOption: '_blank',
-                  options: ['link', 'unlink'],
-                },
-                image: {
-                  uploadCallback: (file: File) => {
-                    return new Promise((resolve, reject) => {
-                      const reader = new FileReader();
-                      reader.readAsDataURL(file);
-                      reader.onload = () => resolve({ data: { link: reader.result } });
-                      reader.onerror = (error) => reject(error);
-                    });
-                  },
-                  alt: { present: true, mandatory: false },
-                  previewImage: true,
-                  inputAccept: 'image/gif,image/jpeg,image/jpg,image/png,image/svg',
-                },
-              }}
-            />
-          </div>
-        ) : (
-          <div className="rounded-lg border border-gray-300 bg-white p-6 dark:border-gray-700 dark:bg-gray-900">
-            <h4 className="mb-4 text-lg font-semibold text-gray-800 dark:text-white">
-              Preview (Links are clickable)
-            </h4>
-            <div
-              className="prose prose-sm max-w-none dark:prose-invert prose-a:text-blue-600 prose-a:underline hover:prose-a:text-blue-800 dark:prose-a:text-blue-400 dark:hover:prose-a:text-blue-300"
-              dangerouslySetInnerHTML={{ __html: this.getHtmlContent() }}
-            />
-          </div>
-        )}
-
+      <div className="flex items-center justify-center p-8 text-gray-400 border border-gray-200 dark:border-gray-700 rounded-xl">
+        <div className="animate-pulse">Loading Editor...</div>
       </div>
     );
   }
-}
+
+  return (
+    <div
+      className="rich-text-editor-wrapper w-full max-w-full"
+      style={{ "--editor-min-height": minHeight } as React.CSSProperties}
+    >
+      {/* Header with action buttons */}
+      {(showPreviewToggle || showClearButton || showSaveButton) && (
+        <div
+          className="mb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+          dir={direction}
+        >
+          <h3 className="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
+            <Baseline className="w-5 h-5 text-brand-500" />
+            {showPreview ? "Preview Mode" : "Rich Text Editor"}
+          </h3>
+          <div className="flex flex-wrap gap-2">
+            {showPreviewToggle && (
+              <button type="button"
+                onClick={togglePreview}
+                className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700"
+              >
+                {showPreview ? "Edit Content" : "Preview"}
+              </button>
+            )}
+            {showClearButton && (
+              <button type="button"
+                onClick={handleClear}
+                className="rounded-lg bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-600 transition hover:bg-gray-200 dark:bg-white/5 dark:text-gray-400 dark:hover:bg-white/10"
+              >
+                Clear
+              </button>
+            )}
+            {showSaveButton && (
+              <button type="button"
+                onClick={handleSave}
+                className="rounded-lg bg-brand-500 px-6 py-2 text-sm font-bold text-white shadow-lg transition hover:bg-brand-600 focus:outline-none focus:ring-4 focus:ring-brand-500/30"
+              >
+                Save
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {!showPreview ? (
+        <div className="tiptap-editor-wrapper border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-sm bg-white dark:bg-gray-900 transition-all focus-within:ring-2 focus-within:ring-brand-500/20 focus-within:border-brand-500">
+          <MenuBar editor={editor} />
+          <EditorContent
+            editor={editor}
+            className="tiptap-content prose max-w-none dark:prose-invert"
+          />
+
+          {/* Text Formatting Bubble Menu */}
+          <BubbleMenu
+            editor={editor}
+            pluginKey="textBubbleMenu"
+            shouldShow={shouldShowTextMenu}
+          >
+            <div className="flex items-center gap-1 rounded-lg border border-gray-200 bg-white p-1 shadow-xl overflow-hidden dark:border-gray-800 dark:bg-gray-900">
+              <button type="button"
+                onClick={() => editor.chain().focus().toggleBold().run()}
+                className={`rounded p-1.5 px-3 text-xs font-bold transition hover:bg-gray-100 dark:hover:bg-gray-800 ${editor.isActive("bold") ? "bg-brand-50 text-brand-500 dark:bg-brand-500/20" : "text-gray-600 dark:text-gray-400"}`}
+              >
+                B
+              </button>
+              <button type="button"
+                onClick={() => editor.chain().focus().toggleItalic().run()}
+                className={`rounded p-1.5 px-3 text-xs font-bold italic transition hover:bg-gray-100 dark:hover:bg-gray-800 ${editor.isActive("italic") ? "bg-brand-50 text-brand-500 dark:bg-brand-500/20" : "text-gray-600 dark:text-gray-400"}`}
+              >
+                I
+              </button>
+              <div className="mx-1 h-3 w-px bg-gray-200 dark:bg-gray-700"></div>
+              <button type="button"
+                onClick={setLink}
+                className={`rounded p-1.5 px-3 text-xs font-semibold transition hover:bg-gray-100 dark:hover:bg-gray-800 ${editor.isActive("link") ? "bg-brand-50 text-brand-500 dark:bg-brand-500/20" : "text-gray-600 dark:text-gray-400"}`}
+              >
+                Link
+              </button>
+            </div>
+          </BubbleMenu>
+
+          {/* Table Specific Bubble Menu */}
+          <BubbleMenu
+            editor={editor}
+            pluginKey="tableBubbleMenu"
+            shouldShow={shouldShowTableMenu}
+          >
+              <div className="flex items-center gap-1 rounded-lg border border-gray-200 bg-white p-1 shadow-2xl overflow-hidden dark:border-gray-700 dark:bg-gray-800 scale-110">
+                <button type="button"
+                  onClick={() => editor.chain().focus().toggleHeaderRow().run()}
+                  className={`flex items-center gap-1.5 rounded p-2 text-xs font-bold transition-colors ${editor.isActive("tableHeader") ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200" : "text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"}`}
+                  title="Toggle Header Row"
+                >
+                  <Type size={14} />
+                  <span>Header</span>
+                </button>
+                <div className="h-4 w-px bg-gray-200 dark:bg-gray-700"></div>
+                <button type="button"
+                  onClick={() => editor.chain().focus().addColumnAfter().run()}
+                  className="flex items-center gap-1.5 rounded p-2 text-xs font-bold text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/30 transition-colors"
+                  title="Add Column"
+                >
+                  <Columns size={14} />
+                  <span>Col+</span>
+                </button>
+                <button type="button"
+                  onClick={() => editor.chain().focus().addRowAfter().run()}
+                  className="flex items-center gap-1.5 rounded p-2 text-xs font-bold text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/30 transition-colors"
+                  title="Add Row"
+                >
+                  <Rows size={14} />
+                  <span>Row+</span>
+                </button>
+                <div className="h-4 w-px bg-gray-200 dark:bg-gray-700"></div>
+                <button type="button"
+                  onClick={() => editor.chain().focus().mergeCells().run()}
+                  className="rounded p-2 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+                  title="Merge Cells"
+                  disabled={!editor.can().mergeCells()}
+                >
+                  <TableCellsMerge size={16} />
+                </button>
+                <button type="button"
+                  onClick={() => editor.chain().focus().splitCell().run()}
+                  className="rounded p-2 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+                  title="Split Cell"
+                  disabled={!editor.can().splitCell()}
+                >
+                  <Split size={16} />
+                </button>
+                <div className="h-4 w-px bg-gray-200 dark:bg-gray-700"></div>
+                <button type="button"
+                  onClick={() => editor.chain().focus().deleteRow().run()}
+                  className="rounded p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+                  title="Delete Row"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            </BubbleMenu>
+        </div>
+      ) : (
+        <div className="rounded-xl border border-gray-200 bg-white p-8 shadow-sm dark:border-gray-800 dark:bg-gray-900 min-h-[var(--editor-min-height)]">
+          <div
+            className="prose prose-sm sm:prose-base lg:prose-lg max-w-none dark:prose-invert"
+            dangerouslySetInnerHTML={{ __html: editor.getHTML() }}
+            dir={direction}
+          />
+        </div>
+      )}
+
+      <div className="mt-3 flex items-center justify-between text-[10px] font-medium uppercase tracking-wider text-gray-400 dark:text-gray-500 px-1">
+        <div className="flex items-center gap-3">
+          <span>{editor.storage.characterCount.characters()} Characters</span>
+          <span>{editor.storage.characterCount.words()} Words</span>
+        </div>
+        <div className="text-gray-300 dark:text-gray-600">
+          Tip: Use the "Header" button in the table menu to set the first row as
+          thead
+        </div>
+      </div>
+    </div>
+  );
+});
+
+RichTextEditor.displayName = "RichTextEditor";
+
+export default RichTextEditor;

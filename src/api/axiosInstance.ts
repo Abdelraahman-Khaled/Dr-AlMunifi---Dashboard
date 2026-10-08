@@ -1,4 +1,5 @@
 import axios from "axios";
+import { getToken, clearToken } from "./token";
 
 // Create an instance of axios
 const axiosInstance = axios.create({
@@ -11,7 +12,7 @@ const axiosInstance = axios.create({
 // Request interceptor
 axiosInstance.interceptors.request.use(
     (config) => {
-        const token = localStorage.getItem("token");
+        const token = getToken();
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
@@ -29,10 +30,14 @@ axiosInstance.interceptors.response.use(
     },
     (error) => {
         // Handle global errors (e.g., 401 Unauthorized)
-        if (error.response && error.response.status === 401) {
-            // Logic for logout or redirection
-            localStorage.removeItem("token");
-            window.location.href = "/signin";
+        // A 401 from /login just means wrong credentials: let the form show the error
+        // instead of reloading the page.
+        const isLoginRequest = error.config?.url === "/login";
+        if (error.response?.status === 401 && !isLoginRequest) {
+            clearToken();
+            if (!window.location.pathname.endsWith("/signin")) {
+                window.location.href = "/signin";
+            }
         }
         return Promise.reject(error);
     }

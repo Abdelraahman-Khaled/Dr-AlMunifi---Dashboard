@@ -1,4 +1,13 @@
 import axiosInstance from "./axiosInstance";
+import { clearToken } from "./token";
+
+/**
+ * Sign Out function
+ * Clears the stored token; the caller handles navigation.
+ */
+export const signOut = () => {
+    clearToken();
+};
 
 /**
  * Sign In function
