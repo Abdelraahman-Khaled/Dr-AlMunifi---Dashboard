@@ -4,7 +4,12 @@ import React, {
   forwardRef,
   useState,
 } from "react";
-import { useEditor, EditorContent, type Editor } from "@tiptap/react";
+import {
+  useEditor,
+  EditorContent,
+  isTextSelection,
+  type Editor,
+} from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react/menus";
 import { StarterKit } from "@tiptap/starter-kit";
 import { Underline } from "@tiptap/extension-underline";
@@ -66,9 +71,22 @@ import "./RichTextEditor.css";
 
 // Keep these outside the component: BubbleMenu re-dispatches its options whenever
 // `shouldShow` changes identity, so inline arrows would cause an update loop.
+// Text selections only: selecting an image should not open the text menu.
 const shouldShowTextMenu = ({ editor, from, to }: { editor: Editor; from: number; to: number }) =>
-  from !== to && !editor.isActive("table");
+  from !== to && isTextSelection(editor.state.selection) && !editor.isActive("table");
 const shouldShowTableMenu = ({ editor }: { editor: Editor }) => editor.isActive("table");
+
+// Word / Google Docs pastes carry inline colors and fonts that would end up in the stored HTML.
+const PASTED_STYLE_PROPS = ["color", "background-color", "font-family", "font-size"];
+const stripPastedStyles = (html: string): string => {
+  if (typeof DOMParser === "undefined" || !html.includes("style=")) return html;
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  doc.querySelectorAll<HTMLElement>("[style]").forEach((el) => {
+    PASTED_STYLE_PROPS.forEach((prop) => el.style.removeProperty(prop));
+    if (!el.getAttribute("style")?.trim()) el.removeAttribute("style");
+  });
+  return doc.body.innerHTML;
+};
 
 const useSharedActions = (editor: any) => {
   const addImage = useCallback(() => {
@@ -377,7 +395,7 @@ const RichTextEditor = forwardRef<any, RichTextEditorProps>((props, ref) => {
   const [showPreview, setShowPreview] = useState(false);
 
   const getInitialContent = useCallback(() => {
-    if (localStorageKey) {
+    if (localStorageKey && typeof window !== "undefined") {
       const saved = localStorage.getItem(localStorageKey);
       if (saved) {
         if (!saved.trim().startsWith("{")) {
@@ -406,9 +424,6 @@ const RichTextEditor = forwardRef<any, RichTextEditorProps>((props, ref) => {
       Underline,
       Link.configure({
         openOnClick: false,
-        HTMLAttributes: {
-          class: "cursor-pointer text-blue-600 underline",
-        },
       }),
       Image,
       TextAlign.configure({
@@ -445,7 +460,7 @@ const RichTextEditor = forwardRef<any, RichTextEditorProps>((props, ref) => {
       // Clean up pasted HTML to prevent unwanted bolding from some sources (like MS Word/Google Docs)
       transformPastedHTML(html) {
         return (
-          html
+          stripPastedStyles(html)
             .replace(/font-weight:\s*bold/g, "")
             .replace(/font-weight:\s*700/g, "")
             .replace(/font-weight:\s*800/g, "")
