@@ -65,6 +65,7 @@ import {
   TableCellsMerge,
   Split,
   Type,
+  RemoveFormatting,
 } from "lucide-react";
 
 import "./RichTextEditor.css";
@@ -174,6 +175,15 @@ const MenuBar = ({ editor }: { editor: any }) => {
           title="Highlight"
         >
           <Highlighter size={16} />
+        </button>
+        <button type="button"
+          onClick={() =>
+            editor.chain().focus().unsetAllMarks().clearNodes().unsetTextAlign().run()
+          }
+          className="tiptap-toolbar-button flex items-center justify-center w-8 h-8 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-gray-600 dark:text-gray-400"
+          title="Clear Formatting"
+        >
+          <RemoveFormatting size={16} />
         </button>
       </div>
 
